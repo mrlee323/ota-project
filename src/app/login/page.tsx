@@ -1,19 +1,65 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/ui/components/Card";
 import { Input } from "@/ui/components/Input";
-import { loginAction } from "@/application/auth/actions";
-import { SubmitButton } from "@/ui/components/SubmitButton";
+import { Button } from "@/ui/components/Button";
+import { createClient } from "@/infrastructure/supabase/client";
+import { authCredentialsSchema } from "@/domain/auth/schema";
 
 /**
- * 로그인/회원가입 페이지 (Server Component)
- * searchParams에서 에러 메시지를 읽어 표시하고,
- * Server Action을 form action으로 바인딩한다.
+ * 로그인 페이지 (Client Component)
+ * 브라우저 Supabase 클라이언트로 직접 로그인하여
+ * onAuthStateChange가 즉시 감지되도록 한다.
  */
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
+export default function LoginPage() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const rawEmail = formData.get("email");
+    const rawPassword = formData.get("password");
+
+    // Zod 검증
+    const parsed = authCredentialsSchema.safeParse({
+      email: rawEmail,
+      password: rawPassword,
+    });
+
+    if (!parsed.success) {
+      setError(parsed.error.errors[0]?.message ?? "입력값이 올바르지 않습니다");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: parsed.data.email,
+        password: parsed.data.password,
+      });
+
+      if (authError) {
+        setError(authError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // 로그인 성공 → onAuthStateChange가 자동 감지 → Header 즉시 업데이트
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("로그인 처리 중 오류가 발생했습니다");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-400 via-purple-600 to-brand-500 px-4">
@@ -36,15 +82,13 @@ export default async function LoginPage({
             </p>
           </div>
 
-          {/* URL 쿼리 파라미터 에러 메시지 표시 */}
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-100 p-3 text-sm text-red-600">
               {error}
             </div>
           )}
 
-          {/* 로그인 폼 */}
-          <form action={loginAction} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               name="email"
               type="email"
@@ -62,14 +106,15 @@ export default async function LoginPage({
               className="focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
             />
             <div className="flex flex-col gap-3 pt-2">
-              <SubmitButton
-                formAction={loginAction}
+              <Button
+                type="submit"
                 variant="primary"
                 size="lg"
                 className="w-full rounded-lg"
+                disabled={isLoading}
               >
-                로그인
-              </SubmitButton>
+                {isLoading ? "처리 중..." : "로그인"}
+              </Button>
               <p className="text-center text-sm text-gray-500">
                 계정이 없으신가요?{" "}
                 <a href="/signup" className="font-medium text-purple-600 hover:text-purple-700">

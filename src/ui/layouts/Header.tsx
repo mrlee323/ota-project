@@ -4,26 +4,26 @@ import { useState, useEffect } from "react";
 import { User, Heart, Menu, X, Globe, ChevronDown, LogOut } from "lucide-react";
 import { createClient } from "@/infrastructure/supabase/client";
 import { logoutAction } from "@/application/auth/actions";
-import type { Session } from "@supabase/supabase-js";
 
-export function Header() {
+interface HeaderProps {
+  /** 서버에서 전달받은 초기 인증 상태 */
+  initialAuthenticated?: boolean;
+}
+
+export function Header({ initialAuthenticated = false }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeNav, setActiveNav] = useState("국내호텔");
-  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuthenticated);
 
   const navItems = ["국내호텔", "해외호텔", "에어텔", "패키지", "액티비티"];
 
-  // 브라우저 Supabase 클라이언트로 인증 상태 실시간 감지
+  // 브라우저 Supabase 클라이언트로 인증 상태 변경 실시간 감지
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
+      (_event, session) => {
+        setIsAuthenticated(!!session);
       }
     );
 
@@ -33,10 +33,11 @@ export function Header() {
   }, []);
 
   const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setIsAuthenticated(false);
     await logoutAction();
   };
-
-  const isAuthenticated = session !== null;
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
