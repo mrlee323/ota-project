@@ -1,13 +1,42 @@
-import { useState } from "react";
-import { User, Heart, Menu, X, Globe, ChevronDown } from "lucide-react";
+"use client";
 
-const PRIMARY = "#6728E0";
+import { useState, useEffect } from "react";
+import { User, Heart, Menu, X, Globe, ChevronDown, LogOut } from "lucide-react";
+import { createClient } from "@/infrastructure/supabase/client";
+import { logoutAction } from "@/application/auth/actions";
+import type { Session } from "@supabase/supabase-js";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeNav, setActiveNav] = useState("국내호텔");
+  const [session, setSession] = useState<Session | null>(null);
 
   const navItems = ["국내호텔", "해외호텔", "에어텔", "패키지", "액티비티"];
+
+  // 브라우저 Supabase 클라이언트로 인증 상태 실시간 감지
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        setSession(newSession);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await logoutAction();
+  };
+
+  const isAuthenticated = session !== null;
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
@@ -15,11 +44,11 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-8">
-            <a href="#" className="flex items-center gap-1.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: PRIMARY }}>
+            <a href="/" className="flex items-center gap-1.5">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-brand">
                 <span className="text-white text-sm font-black">T</span>
               </div>
-              <span className="font-black text-xl tracking-tight" style={{ color: PRIMARY }}>OTA</span>
+              <span className="font-black text-xl tracking-tight text-brand">OTA</span>
             </a>
 
             {/* Desktop Nav */}
@@ -28,8 +57,9 @@ export function Header() {
                 <button
                   key={item}
                   onClick={() => setActiveNav(item)}
-                  className="px-3 py-2 rounded-md text-sm transition-colors"
-                  style={activeNav === item ? { color: PRIMARY, fontWeight: 600 } : { color: "#666" }}
+                  className={`px-3 py-2 rounded-md text-sm transition-colors ${
+                    activeNav === item ? "text-brand font-semibold" : "text-gray-500"
+                  }`}
                 >
                   {item}
                 </button>
@@ -48,18 +78,33 @@ export function Header() {
               <Heart size={16} />
               <span>찜</span>
             </button>
-            <button className="hidden md:flex items-center gap-1.5 text-sm text-gray-700 border border-gray-200 px-4 py-2 rounded-full hover:bg-gray-50 transition-colors">
-              <User size={16} />
-              <span>로그인</span>
-            </button>
-            <button
-              className="hidden md:flex text-white text-sm px-4 py-2 rounded-full transition-colors font-medium hover:opacity-90"
-              style={{ backgroundColor: PRIMARY }}
-            >
-              회원가입
-            </button>
 
-            {/* Mobile menu button */}
+            {isAuthenticated ? (
+              <button
+                onClick={handleLogout}
+                className="hidden md:flex items-center gap-1.5 text-sm text-gray-700 border border-gray-200 px-4 py-2 rounded-full hover:bg-gray-50 transition-colors"
+              >
+                <LogOut size={16} />
+                <span>로그아웃</span>
+              </button>
+            ) : (
+              <>
+                <a
+                  href="/login"
+                  className="hidden md:flex items-center gap-1.5 text-sm text-gray-700 border border-gray-200 px-4 py-2 rounded-full hover:bg-gray-50 transition-colors"
+                >
+                  <User size={16} />
+                  <span>로그인</span>
+                </a>
+                <a
+                  href="/signup"
+                  className="hidden md:flex text-white text-sm px-4 py-2 rounded-full transition-colors font-medium hover:opacity-90 bg-brand"
+                >
+                  회원가입
+                </a>
+              </>
+            )}
+
             <button
               className="md:hidden p-2 rounded-md text-gray-600 hover:bg-gray-50"
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -70,7 +115,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4">
           <nav className="flex flex-col gap-1">
@@ -78,15 +122,28 @@ export function Header() {
               <button
                 key={item}
                 onClick={() => { setActiveNav(item); setMobileOpen(false); }}
-                className="text-left px-3 py-2.5 rounded-md text-sm"
-                style={activeNav === item ? { color: PRIMARY, fontWeight: 600, backgroundColor: "#F4EFFE" } : { color: "#444" }}
+                className={`text-left px-3 py-2.5 rounded-md text-sm ${
+                  activeNav === item ? "text-brand font-semibold bg-brand-50" : "text-gray-600"
+                }`}
               >
                 {item}
               </button>
             ))}
             <hr className="my-2 border-gray-100" />
-            <button className="text-left px-3 py-2.5 text-sm text-gray-700">로그인</button>
-            <button className="text-left px-3 py-2.5 text-sm font-medium" style={{ color: PRIMARY }}>회원가입</button>
+
+            {isAuthenticated ? (
+              <button
+                onClick={handleLogout}
+                className="text-left px-3 py-2.5 text-sm text-gray-700"
+              >
+                로그아웃
+              </button>
+            ) : (
+              <>
+                <a href="/login" className="text-left px-3 py-2.5 text-sm text-gray-700">로그인</a>
+                <a href="/signup" className="text-left px-3 py-2.5 text-sm font-medium text-brand">회원가입</a>
+              </>
+            )}
           </nav>
         </div>
       )}

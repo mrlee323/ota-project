@@ -1,7 +1,6 @@
 "use client";
 
 import { useHotelMain } from "@/application/hotel/useHotelMain";
-import { Header } from "@/ui/layouts/Header";
 import { Footer } from "@/ui/layouts/Footer";
 import { HotelSearchBar } from "@/ui/patterns/HotelSearchBar";
 import { DestinationGrid } from "@/ui/patterns/DestinationGrid";
@@ -14,7 +13,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
       <HotelSearchBar />
 
       {isLoading && <MainSkeleton />}
