@@ -21,13 +21,13 @@ export async function createClient(): Promise<SupabaseClient> {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          try {
-            for (const { name, value, options } of cookiesToSet) {
+          for (const { name, value, options } of cookiesToSet) {
+            try {
               cookieStore.set(name, value, options);
+            } catch {
+              // Server Component에서 쿠키 설정이 불가능한 경우 (읽기 전용 컨텍스트)
+              // 개별 쿠키 설정 실패를 무시한다. 미들웨어에서 세션 갱신을 처리한다.
             }
-          } catch {
-            // Server Component에서 쿠키 설정이 불가능한 경우 (읽기 전용 컨텍스트)
-            // 에러를 무시한다. 미들웨어에서 세션 갱신을 처리한다.
           }
         },
       },
