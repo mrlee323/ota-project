@@ -23,13 +23,10 @@ export function PromoTagOutline({ children }: BadgeProps) {
   );
 }
 
-// 할인율 뱃지 - Primary 보라색
+// 할인율 뱃지 - Brand 보라색
 export function DiscountBadge({ percent }: { percent: number }) {
   return (
-    <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded text-white text-[11px] font-bold"
-      style={{ backgroundColor: "#6728E0" }}
-    >
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-white text-[11px] font-bold bg-brand">
       {percent}%
     </span>
   );
@@ -51,10 +48,7 @@ export function LowestPriceBadge() {
 export function AIBadge({ variant = "filled" }: { variant?: "filled" | "outline" }) {
   if (variant === "outline") {
     return (
-      <span
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
-        style={{ color: "#6728E0", borderColor: "#6728E0", backgroundColor: "#F4EFFE" }}
-      >
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-brand text-brand bg-brand-50">
         ✦ AI가격분석
       </span>
     );
@@ -68,6 +62,7 @@ export function AIBadge({ variant = "filled" }: { variant?: "filled" | "outline"
     </span>
   );
 }
+
 
 // 지도/지역 태그
 type LocationColor = "orange" | "green" | "teal" | "blue" | "purple" | "lime";
@@ -102,10 +97,7 @@ export function LocationTag({
 // SPECIAL / EVENT 태그
 export function SpecialTag({ children }: BadgeProps) {
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-bold"
-      style={{ backgroundColor: "#6728E0", color: "#fff" }}
-    >
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-bold bg-brand text-white">
       ✦ {children}
     </span>
   );
@@ -173,24 +165,24 @@ export function TextBadge({
   children: React.ReactNode;
   color?: "gray" | "purple" | "blue" | "green" | "red";
 }) {
-  const colorMap = {
+  const classMap: Record<string, string> = {
     gray: "bg-gray-100 text-gray-600",
-    purple: "text-white",
+    purple: "bg-brand text-white",
     blue: "text-white",
     green: "text-white",
     red: "text-white",
   };
-  const bgMap = {
+  const styleMap: Record<string, React.CSSProperties> = {
     gray: {},
-    purple: { backgroundColor: "#6728E0" },
+    purple: {},
     blue: { backgroundColor: "#0088FF" },
     green: { backgroundColor: "#44BB44" },
     red: { backgroundColor: "#FF4D4D" },
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${colorMap[color]}`}
-      style={bgMap[color]}
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${classMap[color]}`}
+      style={styleMap[color]}
     >
       {children}
     </span>

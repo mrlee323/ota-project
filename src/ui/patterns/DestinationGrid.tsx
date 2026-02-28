@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 
-const PRIMARY = "#6728E0";
-
 interface Destination {
   name: string;
   image: string;
@@ -49,42 +47,34 @@ export function DestinationGrid({ domestic, overseas }: DestinationGridProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <h2
-              className="text-gray-900"
-              style={{ fontSize: "1.25rem", fontWeight: 700 }}
-            >
+            <h2 className="text-gray-900 text-xl font-bold">
               인기 여행지
             </h2>
             {/* Tab toggle */}
             <div className="flex bg-white border border-gray-200 rounded-lg p-0.5 shadow-sm">
               <button
                 onClick={() => setActiveTab("domestic")}
-                className="px-4 py-1.5 rounded-md text-sm transition-all"
-                style={
+                className={`px-4 py-1.5 rounded-md text-sm transition-all ${
                   activeTab === "domestic"
-                    ? { backgroundColor: PRIMARY, color: "#fff", fontWeight: 600 }
-                    : { color: "#666" }
-                }
+                    ? "bg-brand text-white font-semibold"
+                    : "text-gray-500"
+                }`}
               >
                 국내
               </button>
               <button
                 onClick={() => setActiveTab("overseas")}
-                className="px-4 py-1.5 rounded-md text-sm transition-all"
-                style={
+                className={`px-4 py-1.5 rounded-md text-sm transition-all ${
                   activeTab === "overseas"
-                    ? { backgroundColor: PRIMARY, color: "#fff", fontWeight: 600 }
-                    : { color: "#666" }
-                }
+                    ? "bg-brand text-white font-semibold"
+                    : "text-gray-500"
+                }`}
               >
                 해외
               </button>
             </div>
           </div>
-          <button
-            className="flex items-center gap-1 text-sm hover:opacity-70 transition-opacity font-medium"
-            style={{ color: PRIMARY }}
-          >
+          <button className="flex items-center gap-1 text-sm hover:opacity-70 transition-opacity font-medium text-brand">
             더보기 <ChevronRight size={16} />
           </button>
         </div>

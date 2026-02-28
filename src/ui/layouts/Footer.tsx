@@ -1,5 +1,3 @@
-const PRIMARY = "#6728E0";
-
 export function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400 pt-12 pb-8">
@@ -7,7 +5,7 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <div>
             <div className="flex items-center gap-1.5 mb-4">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: PRIMARY }}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-brand">
                 <span className="text-white text-xs font-black">T</span>
               </div>
               <span className="text-white font-black text-lg">OTA</span>

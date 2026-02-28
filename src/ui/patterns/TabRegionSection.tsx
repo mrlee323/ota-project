@@ -5,8 +5,6 @@ import { ArrowRight } from "lucide-react";
 import { ScrollContainer } from "@/ui/components/ScrollContainer";
 import { HotelCard, Hotel } from "./HotelCard";
 
-const PRIMARY = "#6728E0";
-
 interface TabData {
   label: string;
   hotels: Hotel[];
@@ -30,16 +28,10 @@ export function TabRegionSection({
       <div className="max-w-[1200px] mx-auto px-4">
         {/* Header */}
         <div className="flex items-end justify-between mb-5">
-          <h2
-            className="text-gray-900"
-            style={{ fontSize: "1.25rem", fontWeight: 700 }}
-          >
+          <h2 className="text-gray-900 text-xl font-bold">
             {title}
           </h2>
-          <button
-            className="flex items-center gap-1 text-sm hover:opacity-70 transition-opacity font-medium"
-            style={{ color: PRIMARY }}
-          >
+          <button className="flex items-center gap-1 text-sm hover:opacity-70 transition-opacity font-medium text-brand">
             전체 보기 <ArrowRight size={15} />
           </button>
         </div>
@@ -50,21 +42,11 @@ export function TabRegionSection({
             <button
               key={tab.label}
               onClick={() => setActiveTab(idx)}
-              className="px-5 py-2 rounded-full text-sm border transition-all"
-              style={
+              className={`px-5 py-2 rounded-full text-sm border transition-all ${
                 activeTab === idx
-                  ? {
-                      backgroundColor: "#111111",
-                      color: "#fff",
-                      borderColor: "#111111",
-                      fontWeight: 600,
-                    }
-                  : {
-                      backgroundColor: "#fff",
-                      color: "#666",
-                      borderColor: "#DDDDDD",
-                    }
-              }
+                  ? "bg-gray-900 text-white border-gray-900 font-semibold"
+                  : "bg-white text-gray-500 border-gray-200"
+              }`}
             >
               {tab.label}
             </button>

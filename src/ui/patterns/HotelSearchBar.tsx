@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Search, MapPin, Calendar, Users } from "lucide-react";
 
-const PRIMARY = "#6728E0";
-
 export function HotelSearchBar() {
   const [location, setLocation] = useState("");
   const [checkin, setCheckin] = useState("");
@@ -10,9 +8,12 @@ export function HotelSearchBar() {
   const [guests, setGuests] = useState("성인 2명");
 
   return (
-    <div className="py-14 px-4" style={{ background: `linear-gradient(135deg, #4B1FA8 0%, ${PRIMARY} 50%, #9B5CF6 100%)` }}>
+    <div
+      className="py-14 px-4"
+      style={{ background: "linear-gradient(135deg, #4B1FA8 0%, #6728E0 50%, #9B5CF6 100%)" }}
+    >
       <div className="max-w-[1200px] mx-auto">
-        <h1 className="text-white text-center mb-2" style={{ fontSize: "2rem", fontWeight: 800 }}>
+        <h1 className="text-white text-center mb-2 text-[2rem] font-extrabold">
           어디로 떠나고 싶으세요?
         </h1>
         <p className="text-white/80 text-center mb-8 text-sm">
@@ -24,7 +25,7 @@ export function HotelSearchBar() {
           <div className="flex flex-col md:flex-row gap-1">
             {/* Location */}
             <div className="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
-              <MapPin size={18} className="shrink-0" style={{ color: PRIMARY }} />
+              <MapPin size={18} className="shrink-0 text-brand" />
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-gray-400 mb-0.5">여행지</div>
                 <input
@@ -41,7 +42,7 @@ export function HotelSearchBar() {
 
             {/* Check-in */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors min-w-[140px]">
-              <Calendar size={18} className="shrink-0" style={{ color: PRIMARY }} />
+              <Calendar size={18} className="shrink-0 text-brand" />
               <div>
                 <div className="text-xs text-gray-400 mb-0.5">체크인</div>
                 <input
@@ -57,7 +58,7 @@ export function HotelSearchBar() {
 
             {/* Check-out */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors min-w-[140px]">
-              <Calendar size={18} className="shrink-0" style={{ color: PRIMARY }} />
+              <Calendar size={18} className="shrink-0 text-brand" />
               <div>
                 <div className="text-xs text-gray-400 mb-0.5">체크아웃</div>
                 <input
@@ -73,7 +74,7 @@ export function HotelSearchBar() {
 
             {/* Guests */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors min-w-[120px]">
-              <Users size={18} className="shrink-0" style={{ color: PRIMARY }} />
+              <Users size={18} className="shrink-0 text-brand" />
               <div>
                 <div className="text-xs text-gray-400 mb-0.5">인원</div>
                 <select
@@ -90,10 +91,7 @@ export function HotelSearchBar() {
             </div>
 
             {/* Search Button */}
-            <button
-              className="text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2 justify-center font-medium shrink-0 hover:opacity-90"
-              style={{ backgroundColor: PRIMARY }}
-            >
+            <button className="bg-brand text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2 justify-center font-medium shrink-0 hover:bg-brand-600">
               <Search size={18} />
               <span className="hidden md:inline">검색</span>
             </button>

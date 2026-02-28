@@ -20,8 +20,6 @@ interface HotelCardProps {
   size?: "sm" | "md" | "lg";
 }
 
-const PRIMARY = "#6728E0";
-
 function renderPromoTag(tag: string, idx: number) {
   if (tag === "기간한정") return <TimeLimitTag key={idx} />;
   if (tag === "조식포함") return <BreakfastTag key={idx} />;
@@ -50,10 +48,7 @@ export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
         />
         {/* Discount badge */}
         {hotel.discount && (
-          <div
-            className="absolute top-2.5 left-2.5 text-white text-[11px] font-bold px-2 py-0.5 rounded"
-            style={{ backgroundColor: PRIMARY }}
-          >
+          <div className="absolute top-2.5 left-2.5 text-white text-[11px] font-bold px-2 py-0.5 rounded bg-brand">
             {hotel.discount}% OFF
           </div>
         )}
@@ -73,11 +68,7 @@ export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
         >
           <Heart
             size={14}
-            style={
-              liked
-                ? { fill: PRIMARY, color: PRIMARY }
-                : { color: "#BBBBBB" }
-            }
+            className={liked ? "fill-brand text-brand" : "text-gray-300"}
           />
         </button>
         {/* Bottom promo tags on image */}
@@ -91,13 +82,13 @@ export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
       {/* Info */}
       <div>
         <div className="text-xs text-gray-400 mb-0.5">{hotel.location}</div>
-        <h3 className="text-sm text-gray-900 font-semibold truncate mb-1.5 group-hover:text-[#6728E0] transition-colors">
+        <h3 className="text-sm text-gray-900 font-semibold truncate mb-1.5 group-hover:text-brand transition-colors">
           {hotel.name}
         </h3>
         {/* Badges row */}
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           <div className="flex items-center gap-1">
-            <Star size={12} style={{ fill: "#FFCC00", color: "#FFCC00" }} />
+            <Star size={12} className="fill-yellow-400 text-yellow-400" />
             <span className="text-xs font-semibold text-gray-800">
               {hotel.rating.toFixed(2)}
             </span>
@@ -116,7 +107,7 @@ export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
             </span>
           )}
           {hotel.discount && (
-            <span className="text-xs font-bold" style={{ color: PRIMARY }}>
+            <span className="text-xs font-bold text-brand">
               {hotel.discount}%
             </span>
           )}
