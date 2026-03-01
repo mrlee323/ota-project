@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
 import { Header } from "@/ui/layouts/Header";
+import { UtmInitializer } from "@/ui/patterns/utm/UtmInitializer";
 import { getCurrentUser } from "@/infrastructure/supabase/auth";
 import "./globals.css";
 
@@ -26,6 +27,7 @@ export default async function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
         <QueryProvider>
+          <UtmInitializer />
           <Header initialAuthenticated={!!user} />
           {children}
         </QueryProvider>
