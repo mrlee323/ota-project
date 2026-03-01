@@ -1,12 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { createStore } from "jotai";
-import { utmSourceAtom } from "../atoms";
+import { utmSourceAtom, utmInitializedAtom } from "../atoms";
 import type { UtmEntry } from "@/domain/utm/types";
 
 describe("utmSourceAtom", () => {
   it("초기값은 null이어야 한다", () => {
     const store = createStore();
     expect(store.get(utmSourceAtom)).toBeNull();
+  });
+
+  it("utmInitializedAtom 초기값은 false이어야 한다", () => {
+    const store = createStore();
+    expect(store.get(utmInitializedAtom)).toBe(false);
+  });
+
+  it("utmInitializedAtom을 true로 설정하면 초기화 완료를 표현해야 한다", () => {
+    const store = createStore();
+    store.set(utmInitializedAtom, true);
+    expect(store.get(utmInitializedAtom)).toBe(true);
   });
 
   it("UtmEntry를 설정하면 해당 값을 반환해야 한다", () => {

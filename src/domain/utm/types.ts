@@ -41,3 +41,5 @@ export const utmEntrySchema = z.object({
   expiresAt: z.number().nullable(),
   createdAt: z.number(),
 });
+/** UTM 소스가 없을 때 서버에 전달할 기본값 */
+export const DEFAULT_UTM_SOURCE = "direct" as const;

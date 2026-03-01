@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { useSearchParams } from "next/navigation";
-import { utmSourceAtom } from "./atoms";
+import { utmSourceAtom, utmInitializedAtom } from "./atoms";
 import { validateUtmSource, createUtmEntry } from "@/domain/utm/validation";
 import { utmStorageService } from "@/infrastructure/utm/storage";
+import { setUtmSourceHeader } from "@/infrastructure/utm/headerProvider";
+import { DEFAULT_UTM_SOURCE } from "@/domain/utm/types";
 import type { RetentionPeriod } from "@/domain/utm/types";
 
 /** UTM 소스별 보존 기간 매핑 설정 */
@@ -32,6 +34,7 @@ function getRetentionPeriod(source: string): RetentionPeriod {
 export function useUtmInit(): void {
   const searchParams = useSearchParams();
   const setUtmSource = useSetAtom(utmSourceAtom);
+  const setInitialized = useSetAtom(utmInitializedAtom);
 
   useEffect(() => {
     const rawUtmSource = searchParams.get("utm_source");
@@ -43,12 +46,16 @@ export function useUtmInit(): void {
       const entry = createUtmEntry(validatedSource, retentionType);
       utmStorageService.save(entry);
       setUtmSource(entry);
-      return;
+      setUtmSourceHeader(entry.source);
+    } else {
+      // URL에 utm_source가 없으면 저장소에서 복원 시도
+      // load()가 sessionStorage → localStorage 순서로 조회
+      const existingEntry = utmStorageService.load();
+      setUtmSource(existingEntry);
+      setUtmSourceHeader(existingEntry?.source ?? DEFAULT_UTM_SOURCE);
     }
 
-    // URL에 utm_source가 없으면 저장소에서 복원 시도
-    // load()가 sessionStorage → localStorage 순서로 조회
-    const existingEntry = utmStorageService.load();
-    setUtmSource(existingEntry);
-  }, [searchParams, setUtmSource]);
+    // 어떤 경우든 초기화 완료 표시
+    setInitialized(true);
+  }, [searchParams, setUtmSource, setInitialized]);
 }
