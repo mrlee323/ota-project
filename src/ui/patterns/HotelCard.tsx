@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { useAtomValue } from "jotai";
 import { Heart, Star } from "lucide-react";
 import {
   AIBadge,
@@ -12,6 +14,9 @@ import {
   TimeLimitTag,
 } from "../components/Badge";
 import { HotelCardItem } from "@/domain/hotel/types";
+import { serializeSearchParams } from "@/domain/search/validation";
+import { createDefaultSearchParams } from "@/domain/search/defaults";
+import { searchParamsAtom } from "@/application/search/atoms";
 
 export type Hotel = HotelCardItem;
 
@@ -31,6 +36,14 @@ function renderPromoTag(tag: string, idx: number) {
 
 export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
   const [liked, setLiked] = useState(false);
+  const currentSearchParams = useAtomValue(searchParamsAtom);
+
+  // 검색 파라미터가 없으면 기본값을 생성하여 쿼리 문자열에 포함한다
+  const detailHref = useMemo(() => {
+    const params = currentSearchParams ?? createDefaultSearchParams();
+    const queryString = serializeSearchParams(params);
+    return `/hotel/${hotel.id}?${queryString}`;
+  }, [currentSearchParams, hotel.id]);
 
   const cardWidth =
     size === "lg" ? "w-[268px]" : size === "sm" ? "w-[200px]" : "w-[240px]";
@@ -38,7 +51,7 @@ export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
     size === "lg" ? "h-[176px]" : size === "sm" ? "h-[140px]" : "h-[160px]";
 
   return (
-    <div className={`${cardWidth} shrink-0 group cursor-pointer`}>
+    <Link href={detailHref} className={`${cardWidth} shrink-0 group cursor-pointer block`}>
       {/* Image */}
       <div className={`relative ${imgHeight} rounded-2xl overflow-hidden mb-3`}>
         <img
@@ -61,6 +74,7 @@ export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
         {/* Heart button */}
         <button
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             setLiked(!liked);
           }}
@@ -116,6 +130,6 @@ export function HotelCard({ hotel, size = "md" }: HotelCardProps) {
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

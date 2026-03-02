@@ -1,4 +1,5 @@
 import { HotelMainData, HotelSummary, HotelDetail } from "@/domain/hotel/types";
+import type { SearchParams } from "@/domain/search/types";
 import { mockHotelMainList, mockHotelList, mockHotelDetail } from "@/__mocks__/hotel";
 // import { httpClient } from "@/infrastructure/http/client";
 
@@ -26,10 +27,13 @@ export async function fetchHotelList(): Promise<HotelSummary[]> {
 
 /**
  * 호텔 상세 조회
- * TODO: 실제 API 연동 시 httpClient로 교체
+ * TODO: 실제 API 연동 시 httpClient로 교체하고 searchParams를 쿼리 파라미터로 전달
  */
-export async function fetchHotelDetail(id: string): Promise<HotelDetail> {
-  // return httpClient<HotelDetail>(`/api/hotel/${id}`);
+export async function fetchHotelDetail(
+  id: string,
+  searchParams?: SearchParams | null,
+): Promise<HotelDetail> {
+  // return httpClient<HotelDetail>(`/api/hotel/${id}`, { params: searchParams });
 
   await new Promise((resolve) => setTimeout(resolve, 300));
   return mockHotelDetail;
