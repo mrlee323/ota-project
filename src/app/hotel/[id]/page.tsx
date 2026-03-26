@@ -2,6 +2,16 @@
 
 import { useSearchParamsSync } from "@/application/search/useSearchParamsSync";
 import { useHotelDetail } from "@/application/hotel/useHotelDetail";
+import { useGroupBuyInit } from "@/application/celeb/useGroupBuyInit";
+import { useCelebCampaign } from "@/application/celeb/useCelebCampaign";
+import { useRatePlans } from "@/application/hotel/useRatePlans";
+import { celebIdAtom } from "@/application/celeb/atoms";
+import { useAtomValue } from "jotai";
+import { useQuery } from "@tanstack/react-query";
+import { fetchCeleb } from "@/infrastructure/celeb/api";
+import { determineCampaignStatus } from "@/domain/celeb/validation";
+import { CelebProfile } from "@/ui/patterns/celeb/CelebProfile";
+import { RatePlanList } from "@/ui/patterns/hotel/RatePlanList";
 import { Card, CardContent } from "@/ui/components/Card";
 import { ImageWithFallback } from "@/ui/components/ImageWithFallback";
 import { DiscountBadge, TextBadge } from "@/ui/components/Badge";
@@ -16,6 +26,44 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
   const { id } = params;
   const { searchParams } = useSearchParamsSync();
   const { data: hotel, isLoading, error } = useHotelDetail(id, searchParams);
+
+  // 공동구매 진입 초기화 (URL 파라미터 감지 → atom 설정)
+  useGroupBuyInit();
+
+  // 현재 세션의 셀럽 ID 읽기
+  const celebId = useAtomValue(celebIdAtom);
+
+  // 셀럽+호텔 캠페인 조회
+  const { data: campaign } = useCelebCampaign(celebId, id);
+
+  // 캠페인 상태 판정 (캠페인 데이터가 있을 때만)
+  const campaignStatus = campaign
+    ? determineCampaignStatus(campaign.startDate, campaign.endDate)
+    : null;
+
+  // 캠페인 종료 시 셀럽 전용 요금제를 표시하지 않기 위해 celebId를 null로 전달
+  const ratePlanCelebId = campaignStatus === "ENDED" ? null : celebId;
+
+  // 요금제 조회 (셀럽 전용 요금제 포함 여부는 ratePlanCelebId에 의해 결정)
+  const {
+    data: ratePlans,
+    isLoading: isRatePlansLoading,
+    error: ratePlansError,
+  } = useRatePlans(id, searchParams, ratePlanCelebId);
+
+  // 셀럽 프로필 정보 조회
+  const { data: celeb } = useQuery({
+    queryKey: ["celeb", "profile", celebId],
+    queryFn: () => fetchCeleb(celebId!),
+    enabled: !!celebId,
+  });
+
+  // 셀럽 프로필 표시 여부: celebId가 있고, 셀럽 데이터와 캠페인이 존재할 때
+  const showCelebProfile =
+    !!celebId &&
+    !!celeb &&
+    !!campaignStatus &&
+    (campaignStatus === "ACTIVE" || campaignStatus === "ENDED");
 
   if (isLoading) {
     return <HotelDetailSkeleton />;
@@ -46,8 +94,20 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
         {/* 호텔 기본 정보 */}
         <HotelInfo hotel={hotel} />
 
+        {/* 셀럽 프로필 (공동구매 진입 시 표시) */}
+        {showCelebProfile && (
+          <CelebProfile celeb={celeb} campaignStatus={campaignStatus} />
+        )}
+
         {/* 편의시설 */}
         <AmenitiesSection amenities={hotel.amenities} />
+
+        {/* 요금제 리스트 */}
+        <RatePlanList
+          ratePlans={ratePlans}
+          isLoading={isRatePlansLoading}
+          error={ratePlansError}
+        />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { DestinationGrid } from "@/ui/patterns/DestinationGrid";
 import { RegionSection } from "@/ui/patterns/RegionSection";
 import { TabRegionSection } from "@/ui/patterns/TabRegionSection";
 import { MainSkeleton } from "@/ui/patterns/MainSkeleton";
+import { CelebBanner } from "@/ui/patterns/celeb/CelebBanner";
 
 export default function Home() {
   const { data, isLoading, error } = useHotelMain();
@@ -14,6 +15,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <HotelSearchBar />
+
+      {/* 셀럽 공동구매 배너 */}
+      <CelebBanner />
 
       {isLoading ? (
         <MainSkeleton />
