@@ -1,4 +1,5 @@
 import { DiscountBadge } from "@/ui/components/Badge";
+import { BookButton } from "@/ui/patterns/hotel/BookButton";
 import type { RatePlan, CelebRatePlan } from "@/domain/hotel/ratePlan";
 import { isCelebRatePlan } from "@/domain/hotel/ratePlan";
 
@@ -24,10 +25,12 @@ export function formatServices(services: string[]): string {
 interface RatePlanItemProps {
   /** 요금제 (일반 또는 셀럽 전용) */
   ratePlan: RatePlan | CelebRatePlan;
+  /** 호텔명 — BookButton에 전달하여 예약 확인 페이지로 전파 */
+  hotelName: string;
 }
 
 /** 요금제 항목 — 일반/셀럽 전용 요금제를 조건부 렌더링 */
-export function RatePlanItem({ ratePlan }: RatePlanItemProps) {
+export function RatePlanItem({ ratePlan, hotelName }: RatePlanItemProps) {
   const isCeleb = isCelebRatePlan(ratePlan);
 
   return (
@@ -80,6 +83,14 @@ export function RatePlanItem({ ratePlan }: RatePlanItemProps) {
       <p className="mt-2 text-[11px] text-gray-400">
         {ratePlan.cancellationPolicy}
       </p>
+
+      {/* 예약하기 버튼 */}
+      <BookButton
+        roomId={ratePlan.id}
+        roomName={ratePlan.roomTypeName}
+        price={isCeleb ? ratePlan.discountedPrice : ratePlan.pricePerNight}
+        hotelName={hotelName}
+      />
     </div>
   );
 }

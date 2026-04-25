@@ -47,10 +47,12 @@ interface RatePlanListProps {
   isLoading: boolean;
   /** 에러 */
   error?: Error | null;
+  /** 호텔명 — RatePlanItem → BookButton으로 전달 */
+  hotelName: string;
 }
 
 /** 요금제 리스트 — 로딩/빈 목록/에러/정상 상태를 조건부 렌더링 */
-export function RatePlanList({ ratePlans, isLoading, error }: RatePlanListProps) {
+export function RatePlanList({ ratePlans, isLoading, error, hotelName }: RatePlanListProps) {
   const state = determineListState(isLoading, error, ratePlans);
 
   return (
@@ -82,7 +84,7 @@ export function RatePlanList({ ratePlans, isLoading, error }: RatePlanListProps)
       {state === "normal" && (
         <div className="flex flex-col gap-3">
           {ratePlans.map((plan) => (
-            <RatePlanItem key={plan.id} ratePlan={plan} />
+            <RatePlanItem key={plan.id} ratePlan={plan} hotelName={hotelName} />
           ))}
         </div>
       )}
