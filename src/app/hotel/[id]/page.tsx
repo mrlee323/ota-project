@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback, useEffect } from "react";
 import { useSearchParamsSync } from "@/application/search/useSearchParamsSync";
 import { useHotelDetail } from "@/application/hotel/useHotelDetail";
 import { useGroupBuyInit } from "@/application/celeb/useGroupBuyInit";
@@ -12,20 +13,39 @@ import { fetchCeleb } from "@/infrastructure/celeb/api";
 import { determineCampaignStatus } from "@/domain/celeb/validation";
 import { CelebProfile } from "@/ui/patterns/celeb/CelebProfile";
 import { RatePlanList } from "@/ui/patterns/hotel/RatePlanList";
+import { SearchDatePicker } from "@/ui/patterns/search/SearchDatePicker";
+import { GuestSelector } from "@/ui/patterns/booking/GuestSelector";
 import { Card, CardContent } from "@/ui/components/Card";
 import { ImageWithFallback } from "@/ui/components/ImageWithFallback";
 import { DiscountBadge, TextBadge } from "@/ui/components/Badge";
 import type { HotelDetail } from "@/domain/hotel/types";
+import type { SearchParams } from "@/domain/search/types";
 
 interface HotelDetailPageProps {
   params: { id: string };
 }
 
-/** 호텔 상세 페이지 — 검색 파라미터를 URL에서 동기화하여 표시 */
+/** 호텔 상세 페이지 — 검색 버튼 클릭 시에만 요금을 리패치한다 */
 export default function HotelDetailPage({ params }: HotelDetailPageProps) {
   const { id } = params;
-  const { searchParams } = useSearchParamsSync();
-  const { data: hotel, isLoading, error } = useHotelDetail(id, searchParams);
+  const { searchParams, updateSearchParams } = useSearchParamsSync();
+
+  // 로컬 편집 상태 (날짜/인원 변경 시 즉시 반영, 검색 버튼 전까지 요금 리패치 안 함)
+  const [draft, setDraft] = useState<Partial<SearchParams>>({});
+  // 검색 버튼 클릭 후 요금 로딩 중 오버레이 표시 여부
+  const [isSearching, setIsSearching] = useState(false);
+
+  // 편집 중인 값 (draft가 있으면 draft, 없으면 searchParams)
+  const editingCheckIn = draft.checkInDate ?? searchParams?.checkInDate ?? "";
+  const editingCheckOut = draft.checkOutDate ?? searchParams?.checkOutDate ?? "";
+  const editingAdultCount = draft.adultCount ?? searchParams?.adultCount ?? 2;
+  const editingChildrenAges = draft.childrenAges ?? searchParams?.childrenAges ?? [];
+
+  // draft가 적용된 searchParams와 다른지 확인 (검색 버튼 활성화 여부)
+  const hasDraftChanges = Object.keys(draft).length > 0;
+
+  // 호텔 기본 정보 조회 (검색 파라미터와 무관하게 호텔 ID로만 조회)
+  const { data: hotel, isLoading, error } = useHotelDetail(id);
 
   // 공동구매 진입 초기화 (URL 파라미터 감지 → atom 설정)
   useGroupBuyInit();
@@ -44,7 +64,7 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
   // 캠페인 종료 시 셀럽 전용 요금제를 표시하지 않기 위해 celebId를 null로 전달
   const ratePlanCelebId = campaignStatus === "ENDED" ? null : celebId;
 
-  // 요금제 조회 (셀럽 전용 요금제 포함 여부는 ratePlanCelebId에 의해 결정)
+  // 요금제 조회 — searchParams(적용된 값)로만 조회, draft 변경 시에는 리패치 안 함
   const {
     data: ratePlans,
     isLoading: isRatePlansLoading,
@@ -58,12 +78,27 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
     enabled: !!celebId,
   });
 
-  // 셀럽 프로필 표시 여부: celebId가 있고, 셀럽 데이터와 캠페인이 존재할 때
+  // 셀럽 프로필 표시 여부
   const showCelebProfile =
     !!celebId &&
     !!celeb &&
     !!campaignStatus &&
     (campaignStatus === "ACTIVE" || campaignStatus === "ENDED");
+
+  // 검색 버튼 클릭 → draft를 적용하여 searchParams 업데이트 → 요금 리패치
+  const handleSearch = useCallback(() => {
+    if (!hasDraftChanges) return;
+    setIsSearching(true);
+    updateSearchParams(draft);
+    setDraft({});
+  }, [draft, hasDraftChanges, updateSearchParams]);
+
+  // 요금 로딩 완료 시 오버레이 해제
+  useEffect(() => {
+    if (isSearching && !isRatePlansLoading) {
+      setIsSearching(false);
+    }
+  }, [isSearching, isRatePlansLoading]);
 
   if (isLoading) {
     return <HotelDetailSkeleton />;
@@ -78,7 +113,14 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="relative min-h-screen bg-gray-50">
+      {/* 검색 중 전체 오버레이 */}
+      {isSearching && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/60">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-brand" />
+        </div>
+      )}
+
       {/* 검색 조건 요약 바 */}
       <SearchConditionBar
         checkInDate={searchParams?.checkInDate}
@@ -88,6 +130,40 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
       />
 
       <div className="max-w-[1200px] mx-auto px-4 py-6 space-y-6">
+        {/* 날짜/인원 검색 조건 + 검색 버튼 */}
+        {searchParams && (
+          <div className="flex items-stretch gap-3">
+            <div className="flex flex-1 gap-3">
+              <div className="flex-1">
+                <SearchDatePicker
+                  checkInDate={editingCheckIn}
+                  checkOutDate={editingCheckOut}
+                  onChange={(checkInDate, checkOutDate) =>
+                    setDraft((prev) => ({ ...prev, checkInDate, checkOutDate }))
+                  }
+                />
+              </div>
+              <div className="flex-1">
+                <GuestSelector
+                  adultCount={editingAdultCount}
+                  childrenAges={editingChildrenAges}
+                  onChange={(adultCount, childrenAges) =>
+                    setDraft((prev) => ({ ...prev, adultCount, childrenAges }))
+                  }
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={!hasDraftChanges}
+              className="rounded-lg bg-brand px-6 text-sm font-semibold text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              검색
+            </button>
+          </div>
+        )}
+
         {/* 호텔 이미지 갤러리 */}
         <ImageGallery images={hotel.images} name={hotel.name} />
 
@@ -102,11 +178,12 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
         {/* 편의시설 */}
         <AmenitiesSection amenities={hotel.amenities} />
 
-        {/* 요금제 리스트 */}
+        {/* 요금제 리스트 — 리패치 중 스켈레톤 표시 */}
         <RatePlanList
           ratePlans={ratePlans}
           isLoading={isRatePlansLoading}
           error={ratePlansError}
+          hotelName={hotel.name}
         />
       </div>
     </div>
@@ -151,17 +228,17 @@ function SearchConditionBar({
       <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-gray-500">체크인</span>
-          <span className="font-medium">{formatDate(checkInDate)}</span>
+          <span className="font-semibold text-gray-900">{formatDate(checkInDate)}</span>
         </div>
         <span className="text-gray-300">→</span>
         <div className="flex items-center gap-2">
           <span className="text-gray-500">체크아웃</span>
-          <span className="font-medium">{formatDate(checkOutDate)}</span>
+          <span className="font-semibold text-gray-900">{formatDate(checkOutDate)}</span>
         </div>
         <span className="text-gray-300">|</span>
-        <span className="text-gray-700">{nights}박</span>
+        <span className="font-medium text-gray-900">{nights}박</span>
         <span className="text-gray-300">|</span>
-        <span className="text-gray-700">{guestText}</span>
+        <span className="font-medium text-gray-900">{guestText}</span>
       </div>
     </div>
   );
