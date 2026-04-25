@@ -80,3 +80,20 @@ export function deserializeSearchParams(queryString: string): RawSearchParams {
 
   return raw;
 }
+
+/** 총 투숙 인원 최대값 */
+export const MAX_TOTAL_GUESTS = 8;
+
+/** 성인 최소 인원 */
+export const MIN_ADULTS = 1;
+
+/** 게스트를 추가할 수 있는지 판단한다 (총 인원 < MAX_TOTAL_GUESTS) */
+export function canAddGuest(adultCount: number, childrenCount: number): boolean {
+  return adultCount + childrenCount < MAX_TOTAL_GUESTS;
+}
+
+/** 성인을 감소시킬 수 있는지 판단한다 (성인 > MIN_ADULTS) */
+export function canRemoveAdult(adultCount: number): boolean {
+  return adultCount > MIN_ADULTS;
+}
+
