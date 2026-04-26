@@ -1,17 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
+import type { ShowcaseHotelCard } from "@/domain/hotel/showcaseTypes";
+import { showcaseHotelCardSchema } from "@/domain/hotel/showcaseTypes";
 import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
-import { DateRangePicker } from "@/ui/components/DateRangePicker";
+import { DatePicker } from "@/ui/components/DatePicker";
 import { Input } from "@/ui/components/Input";
 
 // ─── 폼 스키마 ───────────────────────────────────────────────────────────────
@@ -25,6 +28,7 @@ const editFormSchema = z
     startTime: z.string().min(1, "시작 시간을 입력해 주세요"),
     endDate: z.string().min(1, "종료일을 선택해 주세요"),
     endTime: z.string().min(1, "종료 시간을 입력해 주세요"),
+    hotels: z.array(showcaseHotelCardSchema),
   })
   .refine(
     (d) =>
@@ -45,10 +49,17 @@ interface ShowcaseEditFormProps {
 function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
   const queryClient = useQueryClient();
 
+  // 호텔 추가 모드 상태
+  const [isAddingHotels, setIsAddingHotels] = useState(false);
+  const [candidateHotels, setCandidateHotels] = useState<ShowcaseHotelCard[]>([]);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+
   const {
     register,
     control,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitSuccessful },
   } = useForm<EditFormValues>({
     resolver: zodResolver(editFormSchema),
@@ -60,7 +71,13 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
       startTime: format(new Date(showcase.startDate), "HH:mm"),
       endDate: format(new Date(showcase.endDate), "yyyy-MM-dd"),
       endTime: format(new Date(showcase.endDate), "HH:mm"),
+      hotels: showcase.hotels,
     },
+  });
+
+  const { fields: hotelFields, remove: removeHotel, append: appendHotel } = useFieldArray({
+    control,
+    name: "hotels",
   });
 
   const updateMutation = useMutation({
@@ -71,6 +88,38 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
     },
   });
 
+  const generateImageMutation = useMutation({
+    mutationFn: () =>
+      showcaseService.generateImage(showcase.cityName, watch("title") || showcase.title),
+    onSuccess: (url) => setValue("imageUrl", url, { shouldValidate: true }),
+  });
+
+  const generateHotelsMutation = useMutation({
+    mutationFn: () => showcaseService.generateHotels(showcase.cityName),
+    onSuccess: (hotels) => {
+      setCandidateHotels(hotels);
+      setSelectedCandidateIds(hotels.map((h) => h.id));
+      setIsAddingHotels(true);
+    },
+  });
+
+  const handleConfirmAddHotels = () => {
+    const toAdd = candidateHotels.filter((h) => selectedCandidateIds.includes(h.id));
+    const existingIds = new Set(hotelFields.map((f) => f.id));
+    toAdd.forEach((h) => {
+      if (!existingIds.has(h.id)) appendHotel(h);
+    });
+    setIsAddingHotels(false);
+    setCandidateHotels([]);
+    setSelectedCandidateIds([]);
+  };
+
+  const toggleCandidate = (hotelId: string) => {
+    setSelectedCandidateIds((prev) =>
+      prev.includes(hotelId) ? prev.filter((id) => id !== hotelId) : [...prev, hotelId],
+    );
+  };
+
   const onSubmit = (values: EditFormValues) => {
     updateMutation.mutate({
       title: values.title,
@@ -78,6 +127,7 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
       serviceEnabled: values.serviceEnabled,
       startDate: new Date(`${values.startDate}T${values.startTime}:00`).toISOString(),
       endDate: new Date(`${values.endDate}T${values.endTime}:00`).toISOString(),
+      hotels: values.hotels,
     });
   };
 
@@ -92,80 +142,193 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
             {...register("title")}
           />
 
-          <Input
-            label="이미지 URL"
-            placeholder="https://example.com/image.jpg"
-            error={errors.imageUrl?.message}
-            {...register("imageUrl")}
-          />
-
-          {/* 서비스 활성화 토글 */}
-          <div className="w-full space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">서비스 활성화</label>
-            <Controller
-              control={control}
-              name="serviceEnabled"
-              render={({ field }) => (
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={field.value}
-                  onClick={() => field.onChange(!field.value)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                    field.value ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      field.value ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              )}
+          {/* 이미지 URL + 미리보기 */}
+          <div className="space-y-2">
+            <Input
+              label="이미지 URL"
+              placeholder="https://example.com/image.jpg"
+              error={errors.imageUrl?.message}
+              {...register("imageUrl")}
             />
+            <div className="relative h-48 w-full overflow-hidden rounded-md border border-gray-200 bg-gray-100">
+              {watch("imageUrl") ? (
+                <img
+                  src={watch("imageUrl")}
+                  alt="미리보기"
+                  className="h-full w-full object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.display = ""; }}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-gray-400">이미지 없음</div>
+              )}
+              {generateImageMutation.isPending && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                  <span className="text-sm font-medium text-white">이미지 생성 중...</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => generateImageMutation.mutate()}
+                disabled={generateImageMutation.isPending}
+                className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-md bg-black/60 px-3 py-1.5 text-xs font-medium text-white hover:bg-black/80 disabled:opacity-50"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                AI 이미지 재생성
+              </button>
+            </div>
+            {generateImageMutation.isError && (
+              <p className="text-xs text-red-500">이미지 생성에 실패했습니다. 다시 시도해 주세요.</p>
+            )}
           </div>
 
-          {/* 노출 기간 (날짜 + 시간) */}
+          {/* 노출 기간 */}
           <div className="space-y-3">
-            <Controller
-              control={control}
-              name="startDate"
-              render={({ field: startField }) => (
+            <label className="text-sm font-medium text-gray-700">노출 기간</label>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Controller
+                  control={control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <DatePicker label="시작일" value={field.value} onChange={field.onChange} error={errors.startDate?.message} />
+                  )}
+                />
+              </div>
+              <div className="w-32 space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">시간</label>
+                <input type="time" className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none" {...register("startTime")} />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
                 <Controller
                   control={control}
                   name="endDate"
-                  render={({ field: endField }) => (
-                    <DateRangePicker
-                      startDate={startField.value}
-                      endDate={endField.value}
-                      onChange={(start, end) => {
-                        startField.onChange(start);
-                        endField.onChange(end);
-                      }}
-                      error={errors.startDate?.message}
-                    />
+                  render={({ field }) => (
+                    <DatePicker label="종료일" value={field.value} onChange={field.onChange} />
                   )}
                 />
-              )}
-            />
-            <div className="flex gap-4">
-              <div className="flex-1 space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">시작 시간</label>
-                <input
-                  type="time"
-                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                  {...register("startTime")}
-                />
               </div>
-              <div className="flex-1 space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">종료 시간</label>
-                <input
-                  type="time"
-                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                  {...register("endTime")}
-                />
+              <div className="w-32 space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">시간</label>
+                <input type="time" className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none" {...register("endTime")} />
               </div>
             </div>
+          </div>
+
+          {/* 호텔 목록 */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">
+                호텔 목록 <span className="ml-1 text-gray-400">({hotelFields.length}개)</span>
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => generateHotelsMutation.mutate()}
+                disabled={generateHotelsMutation.isPending || isAddingHotels}
+              >
+                {generateHotelsMutation.isPending ? "생성 중..." : "AI 호텔 추가"}
+              </Button>
+            </div>
+
+            {/* 현재 호텔 목록 */}
+            {hotelFields.length > 0 ? (
+              <div className="space-y-2">
+                {hotelFields.map((field, index) => (
+                  <div key={field.id} className="flex items-center gap-3 rounded-md border border-gray-200 bg-white p-3">
+                    <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-gray-100">
+                      <img src={field.imageUrl} alt={field.name} className="h-full w-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-yellow-500">{"★".repeat(field.stars)}</span>
+                        <span className="truncate text-sm font-medium text-gray-900">{field.name}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">{field.location}</p>
+                      <p className="text-xs font-medium text-gray-700">
+                        {field.discountRate != null && field.discountRate > 0 && (
+                          <span className="mr-1 text-red-500">{field.discountRate}%</span>
+                        )}
+                        {field.discountPrice.toLocaleString("ko-KR")}원~
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeHotel(index)}
+                      className="shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                      aria-label="호텔 삭제"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-md border border-dashed border-gray-300 py-6 text-center text-sm text-gray-400">
+                등록된 호텔이 없습니다
+              </p>
+            )}
+
+            {/* AI 호텔 후보 선택 UI */}
+            {isAddingHotels && candidateHotels.length > 0 && (
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-blue-800">
+                    AI 생성 호텔 — {selectedCandidateIds.length}/{candidateHotels.length}개 선택
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setSelectedCandidateIds(candidateHotels.map((h) => h.id))} className="text-xs text-blue-600 hover:underline">전체 선택</button>
+                    <button type="button" onClick={() => setSelectedCandidateIds([])} className="text-xs text-blue-600 hover:underline">전체 해제</button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {candidateHotels.map((hotel) => {
+                    const selected = selectedCandidateIds.includes(hotel.id);
+                    return (
+                      <button
+                        key={hotel.id}
+                        type="button"
+                        onClick={() => toggleCandidate(hotel.id)}
+                        className={`flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors ${
+                          selected ? "border-blue-400 bg-white" : "border-gray-200 bg-white opacity-60"
+                        }`}
+                      >
+                        <input type="checkbox" readOnly checked={selected} className="h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600" />
+                        <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-gray-100">
+                          <img src={hotel.imageUrl} alt={hotel.name} className="h-full w-full object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-yellow-500">{"★".repeat(hotel.stars)}</span>
+                            <span className="truncate text-sm font-medium text-gray-900">{hotel.name}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{hotel.location}</p>
+                          <p className="text-xs font-medium text-gray-700">
+                            {hotel.discountRate != null && hotel.discountRate > 0 && (
+                              <span className="mr-1 text-red-500">{hotel.discountRate}%</span>
+                            )}
+                            {hotel.discountPrice.toLocaleString("ko-KR")}원~
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsAddingHotels(false); setCandidateHotels([]); setSelectedCandidateIds([]); }}>취소</Button>
+                  <Button type="button" variant="primary" size="sm" disabled={selectedCandidateIds.length === 0} onClick={handleConfirmAddHotels}>
+                    {selectedCandidateIds.length}개 추가
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {isSubmitSuccessful && updateMutation.isSuccess && (
@@ -175,7 +338,28 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
             <p className="text-sm text-red-500">저장에 실패했습니다. 다시 시도해 주세요.</p>
           )}
 
-          <div className="flex justify-end">
+          {/* 서비스 활성화 + 저장 버튼 */}
+          <div className="flex items-center justify-end gap-4">
+            <Controller
+              control={control}
+              name="serviceEnabled"
+              render={({ field }) => (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">서비스 활성화</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={field.value}
+                    onClick={() => field.onChange(!field.value)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                      field.value ? "bg-blue-600" : "bg-gray-200"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${field.value ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
+                </div>
+              )}
+            />
             <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
               {updateMutation.isPending ? "저장 중..." : "저장"}
             </Button>
@@ -208,19 +392,15 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
       </div>
 
       {isLoading && (
-        <Card>
-          <CardContent>
-            <p className="text-center text-gray-500 py-8">컨텐츠를 불러오는 중...</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent>
+          <p className="text-center text-gray-500 py-8">컨텐츠를 불러오는 중...</p>
+        </CardContent></Card>
       )}
 
       {isError && (
-        <Card>
-          <CardContent>
-            <p className="text-center text-red-500 py-8">데이터를 불러오는 데 실패했습니다.</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent>
+          <p className="text-center text-red-500 py-8">데이터를 불러오는 데 실패했습니다.</p>
+        </CardContent></Card>
       )}
 
       {!isLoading && !isError && !showcase && (
