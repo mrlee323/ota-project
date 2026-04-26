@@ -8,6 +8,7 @@ import { RegionSection } from "@/ui/patterns/RegionSection";
 import { TabRegionSection } from "@/ui/patterns/TabRegionSection";
 import { MainSkeleton } from "@/ui/patterns/MainSkeleton";
 import { CelebBanner } from "@/ui/patterns/celeb/CelebBanner";
+import { RegionShowcase } from "@/ui/patterns/RegionShowcase";
 
 export default function Home() {
   const { data, isLoading, error } = useHotelMain();
@@ -15,6 +16,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <HotelSearchBar />
+
+      {/* 지역별 호텔 쇼케이스 섹션 */}
+      <RegionShowcase />
 
       {/* 셀럽 공동구매 배너 */}
       <CelebBanner />
@@ -100,6 +104,7 @@ export default function Home() {
               cardSize="lg"
             />
           </div>
+
         </>
       ) : null}
 

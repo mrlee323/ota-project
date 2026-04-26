@@ -123,7 +123,7 @@ export function CelebBanner() {
       onMouseLeave={() => setIsPaused(false)}
       aria-label="셀럽 공동구매 배너"
     >
-      <div className="relative h-[280px] rounded-2xl overflow-hidden">
+      <div className="relative h-[180px] rounded-2xl overflow-hidden">
         {/* 슬라이드 트랙 */}
         <div
           className="flex h-full transition-transform duration-500 ease-in-out"
