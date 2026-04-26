@@ -27,9 +27,9 @@ export interface ShowcaseService {
     enabled: boolean,
   ): Promise<ShowcaseContent>;
   /** 타이틀 생성 (AI mock) */
-  generateTitle(cityName: string): Promise<string>;
+  generateTitle(cityName: string, prompt?: string): Promise<string>;
   /** 이미지 생성 (AI mock) */
-  generateImage(cityName: string, title: string): Promise<string>;
+  generateImage(cityName: string, title: string, prompt?: string): Promise<string>;
   /** 호텔 목록 생성 (AI mock) */
   generateHotels(cityName: string): Promise<ShowcaseHotelCard[]>;
 }
@@ -323,9 +323,10 @@ export const mockShowcaseService: ShowcaseService = {
     return { ...mockShowcaseData[index] };
   },
 
-  /** 타이틀 생성 (AI mock - 도시명 기반 타이틀 반환) */
-  async generateTitle(cityName: string): Promise<string> {
+  /** 타이틀 생성 (AI mock - 도시명 + 선택적 프롬프트 기반) */
+  async generateTitle(cityName: string, prompt?: string): Promise<string> {
     await delay(randomDelay());
+    if (prompt) return `${cityName} — ${prompt}`;
     const titles: Record<string, string> = {
       도쿄: "도쿄에서 만나는 특별한 숙소 컬렉션",
       오사카: "오사카의 매력을 담은 베스트 호텔",
@@ -337,7 +338,7 @@ export const mockShowcaseService: ShowcaseService = {
   },
 
   /** 이미지 생성 (AI mock - 도시명 기반 이미지 URL 반환) */
-  async generateImage(cityName: string, title: string): Promise<string> {
+  async generateImage(cityName: string, title: string, _prompt?: string): Promise<string> {
     await delay(randomDelay());
     const slug = encodeURIComponent(cityName);
     return `https://example.com/generated/${slug}-${Date.now()}.jpg`;

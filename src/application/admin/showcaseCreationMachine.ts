@@ -29,6 +29,8 @@ export interface ShowcaseCreationContext {
   hotels: ShowcaseHotelCard[];
   /** 선택된 호텔 ID 목록 */
   selectedHotelIds: string[];
+  /** AI 생성 방향을 지정하는 프롬프트 (선택 입력) */
+  prompt: string;
   /** 에러 메시지 */
   errorMessage: string;
   /** 에러 발생 시 재시도할 상태 추적 */
@@ -43,6 +45,7 @@ export type ShowcaseCreationEvent =
   | { type: "START" }
   | { type: "SUBMIT_CITY"; cityName: string }
   | { type: "SUBMIT_PERIOD"; startDate: string; endDate: string }
+  | { type: "SUBMIT_PROMPT"; prompt: string }
   | { type: "CONFIRM" }
   | { type: "UPDATE_TITLE"; title: string }
   | { type: "REGENERATE_IMAGE" }
@@ -70,14 +73,14 @@ export const showcaseCreationMachine = setup({
   },
   actors: {
     /** 타이틀 생성 비동기 액터 */
-    generateTitle: fromPromise<string, { cityName: string; service: ShowcaseService }>(
-      async ({ input }) => input.service.generateTitle(input.cityName),
+    generateTitle: fromPromise<string, { cityName: string; prompt: string; service: ShowcaseService }>(
+      async ({ input }) => input.service.generateTitle(input.cityName, input.prompt || undefined),
     ),
     /** 이미지 생성 비동기 액터 */
     generateImage: fromPromise<
       string,
-      { cityName: string; title: string; service: ShowcaseService }
-    >(async ({ input }) => input.service.generateImage(input.cityName, input.title)),
+      { cityName: string; title: string; prompt: string; service: ShowcaseService }
+    >(async ({ input }) => input.service.generateImage(input.cityName, input.title, input.prompt || undefined)),
     /** 호텔 목록 생성 비동기 액터 */
     generateHotels: fromPromise<
       ShowcaseHotelCard[],
@@ -106,6 +109,7 @@ export const showcaseCreationMachine = setup({
     cityName: "",
     startDate: "",
     endDate: "",
+    prompt: "",
     title: "",
     imageUrl: "",
     hotels: [],
@@ -122,6 +126,7 @@ export const showcaseCreationMachine = setup({
         cityName: "",
         startDate: "",
         endDate: "",
+        prompt: "",
         title: "",
         imageUrl: "",
         hotels: [],
@@ -157,10 +162,23 @@ export const showcaseCreationMachine = setup({
       on: {
         BACK: { target: "inputtingCity" },
         SUBMIT_PERIOD: {
-          target: "generatingTitle",
+          target: "settingPrompt",
           actions: assign({
             startDate: ({ event }) => event.startDate,
             endDate: ({ event }) => event.endDate,
+          }),
+        },
+      },
+    },
+
+    /** 프롬프트 입력 단계 (선택) */
+    settingPrompt: {
+      on: {
+        BACK: { target: "settingPeriod" },
+        SUBMIT_PROMPT: {
+          target: "generatingTitle",
+          actions: assign({
+            prompt: ({ event }) => event.prompt,
           }),
         },
       },
@@ -172,6 +190,7 @@ export const showcaseCreationMachine = setup({
         src: "generateTitle",
         input: ({ context }) => ({
           cityName: context.cityName,
+          prompt: context.prompt,
           service: context.showcaseService,
         }),
         onDone: {
@@ -194,7 +213,7 @@ export const showcaseCreationMachine = setup({
     /** 타이틀 편집 단계 - 수정 가능 */
     editingTitle: {
       on: {
-        BACK: { target: "settingPeriod" },
+        BACK: { target: "settingPrompt" },
         UPDATE_TITLE: {
           actions: assign({
             title: ({ event }) => event.title,
@@ -211,6 +230,7 @@ export const showcaseCreationMachine = setup({
         input: ({ context }) => ({
           cityName: context.cityName,
           title: context.title,
+          prompt: context.prompt,
           service: context.showcaseService,
         }),
         onDone: {

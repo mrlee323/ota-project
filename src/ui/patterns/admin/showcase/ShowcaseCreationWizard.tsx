@@ -9,20 +9,22 @@ import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
 import { CityInputStep } from "./steps/CityInputStep";
 import { PeriodSettingStep } from "./steps/PeriodSettingStep";
+import { PromptInputStep } from "./steps/PromptInputStep";
 import { TitleEditStep } from "./steps/TitleEditStep";
 import { ImageReviewStep } from "./steps/ImageReviewStep";
 import { HotelSelectStep } from "./steps/HotelSelectStep";
 
 // ─── 스텝 정의 ──────────────────────────────────────────────────────────────
 
-/** 위저드 스텝 정보 (6단계) */
+/** 위저드 스텝 정보 (7단계) */
 const STEPS = [
   { label: "도시 입력", number: 1 },
   { label: "기간 설정", number: 2 },
-  { label: "타이틀 편집", number: 3 },
-  { label: "이미지 확인", number: 4 },
-  { label: "호텔 선택", number: 5 },
-  { label: "완료", number: 6 },
+  { label: "프롬프트", number: 3 },
+  { label: "타이틀 편집", number: 4 },
+  { label: "이미지 확인", number: 5 },
+  { label: "호텔 선택", number: 6 },
+  { label: "완료", number: 7 },
 ] as const;
 
 /** 상태 → 스텝 번호 매핑 */
@@ -30,14 +32,15 @@ const stateStepMap: Record<string, number> = {
   idle: 1,
   inputtingCity: 1,
   settingPeriod: 2,
-  generatingTitle: 3,
-  editingTitle: 3,
-  generatingImage: 4,
-  reviewingImage: 4,
-  generatingHotels: 5,
-  selectingHotels: 5,
-  saving: 6,
-  done: 6,
+  settingPrompt: 3,
+  generatingTitle: 4,
+  editingTitle: 4,
+  generatingImage: 5,
+  reviewingImage: 5,
+  generatingHotels: 6,
+  selectingHotels: 6,
+  saving: 7,
+  done: 7,
   error: 0,
 };
 
@@ -144,6 +147,7 @@ export function ShowcaseCreationWizard() {
   const currentStep = getStepNumber(stateValue);
   const {
     cityName,
+    prompt,
     title,
     imageUrl,
     hotels,
@@ -232,6 +236,17 @@ export function ShowcaseCreationWizard() {
           onSubmit={(start, end) =>
             send({ type: "SUBMIT_PERIOD", startDate: start, endDate: end })
           }
+          onBack={() => send({ type: "BACK" })}
+        />
+      );
+    }
+
+    // 프롬프트 입력
+    if (state.matches("settingPrompt")) {
+      return (
+        <PromptInputStep
+          cityName={cityName}
+          onSubmit={(p) => send({ type: "SUBMIT_PROMPT", prompt: p })}
           onBack={() => send({ type: "BACK" })}
         />
       );
