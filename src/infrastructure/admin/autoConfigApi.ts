@@ -7,17 +7,38 @@ import {
 } from "@/domain/admin/autoConfig";
 
 const toUtcIso = (v: unknown) =>
-  v ? new Date(v as string).toISOString() : v;
+  v ? new Date(v as string).toISOString() : null;
+
+function defaultNextGenDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(8, 0, 0, 0);
+  return d.toISOString();
+}
+
+function defaultContentStartDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  d.setHours(8, 0, 0, 0);
+  return d.toISOString();
+}
+
+function defaultContentEndDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 3);
+  d.setHours(23, 59, 0, 0);
+  return d.toISOString();
+}
 
 function rowToConfig(row: Record<string, unknown>): AutoConfig {
   return autoConfigSchema.parse({
     enabled: row.enabled,
     intervalType: row.interval_type,
     intervalValue: row.interval_value,
-    nextGenerationDate: toUtcIso(row.next_generation_date),
+    nextGenerationDate: toUtcIso(row.next_generation_date) ?? defaultNextGenDate(),
     suggestedCities: row.suggested_cities ?? [],
-    contentStartDate: toUtcIso(row.content_start_date),
-    contentEndDate: toUtcIso(row.content_end_date),
+    contentStartDate: toUtcIso(row.content_start_date) ?? defaultContentStartDate(),
+    contentEndDate: toUtcIso(row.content_end_date) ?? defaultContentEndDate(),
   });
 }
 
