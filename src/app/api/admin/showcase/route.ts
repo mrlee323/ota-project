@@ -6,7 +6,7 @@ import {
   createShowcaseContent,
 } from "@/infrastructure/admin/showcaseContentApi";
 import { paginationParamsSchema } from "@/domain/admin/pagination";
-import { createShowcaseSchema } from "@/domain/admin/showcaseContent";
+import { showcaseCreationDraftSchema } from "@/domain/admin/showcaseContent";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -28,10 +28,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid params" }, { status: 400 });
   }
 
-  const status = searchParams.get("status") ?? undefined;
+  const serviceEnabledParam = searchParams.get("serviceEnabled");
+  const serviceEnabled =
+    serviceEnabledParam === "true" ? true : serviceEnabledParam === "false" ? false : undefined;
 
   try {
-    const data = await listShowcaseContents(params.data, status);
+    const data = await listShowcaseContents(params.data, serviceEnabled);
     return NextResponse.json(data);
   } catch (err) {
     console.error("showcase list error:", err);
@@ -51,13 +53,13 @@ export async function POST(request: NextRequest) {
   if (!access.canWrite) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await request.json().catch(() => null);
-  const parsed = createShowcaseSchema.safeParse(body);
+  const parsed = showcaseCreationDraftSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
   try {
-    const created = await createShowcaseContent(parsed.data, user.id);
+    const created = await createShowcaseContent(parsed.data);
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
     console.error("showcase create error:", err);

@@ -8,11 +8,13 @@ import {
 
 function rowToConfig(row: Record<string, unknown>): AutoConfig {
   return autoConfigSchema.parse({
-    feature: row.feature,
     enabled: row.enabled,
-    cronExpression: row.cron_expression,
-    lastRunAt: row.last_run_at ?? null,
-    nextRunAt: row.next_run_at ?? null,
+    intervalType: row.interval_type,
+    intervalValue: row.interval_value,
+    nextGenerationDate: row.next_generation_date,
+    suggestedCities: row.suggested_cities ?? [],
+    contentStartDate: row.content_start_date,
+    contentEndDate: row.content_end_date,
   });
 }
 
@@ -21,7 +23,7 @@ export async function getAutoConfig(): Promise<AutoConfig> {
   const { data, error } = await supabase
     .from("showcase_auto_config")
     .select("*")
-    .eq("feature", "showcase")
+    .limit(1)
     .single();
 
   if (error || !data) throw new Error("auto config 조회 실패");
@@ -36,12 +38,16 @@ export async function updateAutoConfig(
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (input.enabled !== undefined) patch.enabled = input.enabled;
-  if (input.cronExpression !== undefined) patch.cron_expression = input.cronExpression;
+  if (input.intervalType !== undefined) patch.interval_type = input.intervalType;
+  if (input.intervalValue !== undefined) patch.interval_value = input.intervalValue;
+  if (input.nextGenerationDate !== undefined) patch.next_generation_date = input.nextGenerationDate;
+  if (input.suggestedCities !== undefined) patch.suggested_cities = input.suggestedCities;
+  if (input.contentStartDate !== undefined) patch.content_start_date = input.contentStartDate;
+  if (input.contentEndDate !== undefined) patch.content_end_date = input.contentEndDate;
 
   const { data, error } = await db
     .from("showcase_auto_config")
     .update(patch)
-    .eq("feature", "showcase")
     .select()
     .single();
 

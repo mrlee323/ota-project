@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/infrastructure/supabase/server";
 import { getFeatureAccess } from "@/infrastructure/admin/permissionsApi";
 import { getAutoConfig, updateAutoConfig } from "@/infrastructure/admin/autoConfigApi";
-import { updateAutoConfigSchema } from "@/domain/admin/autoConfig";
+import { updateAutoConfigInputSchema as updateAutoConfigSchema } from "@/domain/admin/autoConfig";
 
 export async function GET() {
   const supabase = await createClient();

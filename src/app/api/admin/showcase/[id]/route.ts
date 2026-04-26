@@ -6,7 +6,18 @@ import {
   updateShowcaseContent,
   deleteShowcaseContent,
 } from "@/infrastructure/admin/showcaseContentApi";
-import { updateShowcaseSchema } from "@/domain/admin/showcaseContent";
+import { z } from "zod";
+import { showcaseHotelCardSchema } from "@/domain/hotel/showcaseTypes";
+
+const updateShowcaseSchema = z.object({
+  cityName: z.string().min(1).optional(),
+  title: z.string().min(1).optional(),
+  imageUrl: z.string().url().optional(),
+  hotels: z.array(showcaseHotelCardSchema).optional(),
+  serviceEnabled: z.boolean().optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
 
 type RouteContext = { params: Promise<{ id: string }> };
 

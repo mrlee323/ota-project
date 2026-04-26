@@ -1,21 +1,34 @@
 import { NextResponse } from "next/server";
-import { getActiveShowcaseContent } from "@/infrastructure/admin/showcaseContentApi";
+import type { RegionShowcaseData } from "@/domain/hotel/showcaseTypes";
+import { getActiveShowcaseContents } from "@/infrastructure/admin/showcaseContentApi";
+import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
+
+function contentToRegion(content: ShowcaseContent) {
+  return {
+    tab: {
+      id: content.id,
+      name: content.cityName,
+      themeText: content.title,
+      backgroundImageUrl: content.imageUrl,
+    },
+    hotels: content.hotels,
+  };
+}
 
 export async function GET() {
   try {
-    const content = await getActiveShowcaseContent();
+    const contents = await getActiveShowcaseContents();
 
-    if (!content) {
-      return NextResponse.json(
-        { error: "활성화된 쇼케이스 컨텐츠가 없습니다" },
-        { status: 404 },
-      );
+    if (contents.length === 0) {
+      return NextResponse.json({ promoTitle: "", regions: [] } satisfies RegionShowcaseData);
     }
 
-    return NextResponse.json({
-      promoTitle: content.promoTitle,
-      regions: content.regions,
-    });
+    const data: RegionShowcaseData = {
+      promoTitle: contents[0].title,
+      regions: contents.map(contentToRegion),
+    };
+
+    return NextResponse.json(data);
   } catch (err) {
     console.error("showcase API error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

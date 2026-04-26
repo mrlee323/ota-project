@@ -3,19 +3,20 @@ import { createServiceClient } from "@/infrastructure/supabase/serviceClient";
 import {
   showcaseContentSchema,
   type ShowcaseContent,
-  type CreateShowcaseInput,
-  type UpdateShowcaseInput,
+  type ShowcaseCreationDraft,
 } from "@/domain/admin/showcaseContent";
 import type { PaginatedResponse, PaginationParams } from "@/domain/admin/pagination";
 
-/** DB 행을 도메인 타입으로 변환 */
 function rowToContent(row: Record<string, unknown>): ShowcaseContent {
   return showcaseContentSchema.parse({
     id: row.id,
-    promoTitle: row.promo_title,
-    regions: row.regions,
-    status: row.status,
-    createdBy: row.created_by ?? null,
+    cityName: row.city_name,
+    title: row.title,
+    imageUrl: row.image_url,
+    hotels: row.hotels,
+    serviceEnabled: row.service_enabled,
+    startDate: row.start_date,
+    endDate: row.end_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });
@@ -23,7 +24,7 @@ function rowToContent(row: Record<string, unknown>): ShowcaseContent {
 
 export async function listShowcaseContents(
   params: PaginationParams,
-  status?: string,
+  serviceEnabled?: boolean,
 ): Promise<PaginatedResponse<ShowcaseContent>> {
   const supabase = await createClient();
   const { page, limit } = params;
@@ -36,7 +37,7 @@ export async function listShowcaseContents(
     .order("created_at", { ascending: false })
     .range(from, to);
 
-  if (status) query = query.eq("status", status);
+  if (serviceEnabled !== undefined) query = query.eq("service_enabled", serviceEnabled);
 
   const { data, error, count } = await query;
 
@@ -66,17 +67,19 @@ export async function getShowcaseContent(id: string): Promise<ShowcaseContent> {
 }
 
 export async function createShowcaseContent(
-  input: CreateShowcaseInput,
-  createdBy: string,
+  draft: ShowcaseCreationDraft,
 ): Promise<ShowcaseContent> {
   const db = createServiceClient();
   const { data, error } = await db
     .from("showcase_content")
     .insert({
-      promo_title: input.promoTitle,
-      regions: input.regions,
-      status: input.status ?? "draft",
-      created_by: createdBy,
+      city_name: draft.cityName,
+      title: draft.title,
+      image_url: draft.imageUrl,
+      hotels: draft.hotels,
+      service_enabled: false,
+      start_date: draft.startDate,
+      end_date: draft.endDate,
     })
     .select()
     .single();
@@ -88,15 +91,18 @@ export async function createShowcaseContent(
 
 export async function updateShowcaseContent(
   id: string,
-  input: UpdateShowcaseInput,
+  input: Partial<Omit<ShowcaseContent, "id" | "createdAt" | "updatedAt">>,
 ): Promise<ShowcaseContent> {
   const db = createServiceClient();
 
-  const patch: Record<string, unknown> = {};
-  if (input.promoTitle !== undefined) patch.promo_title = input.promoTitle;
-  if (input.regions !== undefined) patch.regions = input.regions;
-  if (input.status !== undefined) patch.status = input.status;
-  patch.updated_at = new Date().toISOString();
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (input.cityName !== undefined) patch.city_name = input.cityName;
+  if (input.title !== undefined) patch.title = input.title;
+  if (input.imageUrl !== undefined) patch.image_url = input.imageUrl;
+  if (input.hotels !== undefined) patch.hotels = input.hotels;
+  if (input.serviceEnabled !== undefined) patch.service_enabled = input.serviceEnabled;
+  if (input.startDate !== undefined) patch.start_date = input.startDate;
+  if (input.endDate !== undefined) patch.end_date = input.endDate;
 
   const { data, error } = await db
     .from("showcase_content")
@@ -116,19 +122,20 @@ export async function deleteShowcaseContent(id: string): Promise<void> {
   if (error) throw new Error(`showcase 삭제 실패: ${error.message}`);
 }
 
-/** 서비스 API용 — active 컨텐츠 1개 조회 (최신순) */
-export async function getActiveShowcaseContent(): Promise<ShowcaseContent | null> {
+/** 서비스 API용 — 현재 활성 컨텐츠 목록 조회 (serviceEnabled + 날짜 범위) */
+export async function getActiveShowcaseContents(): Promise<ShowcaseContent[]> {
   const supabase = await createClient();
+  const now = new Date().toISOString();
+
   const { data, error } = await supabase
     .from("showcase_content")
     .select("*")
-    .eq("status", "active")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq("service_enabled", true)
+    .lte("start_date", now)
+    .gte("end_date", now)
+    .order("created_at", { ascending: false });
 
   if (error) throw new Error(`active showcase 조회 실패: ${error.message}`);
-  if (!data) return null;
 
-  return rowToContent(data);
+  return (data ?? []).map(rowToContent);
 }
