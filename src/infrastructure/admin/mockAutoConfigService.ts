@@ -39,6 +39,7 @@ let currentConfig: AutoConfig = {
   suggestedCities: ["도쿄", "오사카", "방콕"],
   contentStartDate: dayAfterTomorrow.toISOString(),
   contentEndDate: dayAfterTomorrowEnd.toISOString(),
+  promoTitle: "이번 달 인기 숙소",
 };
 
 // ─── Mock 서비스 구현 ───────────────────────────────────────────────────────

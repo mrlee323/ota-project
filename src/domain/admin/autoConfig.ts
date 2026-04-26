@@ -22,6 +22,8 @@ export const autoConfigSchema = z.object({
   contentStartDate: z.string().datetime(),
   /** 자동 생성 컨텐츠 노출 종료일 (ISO 8601) */
   contentEndDate: z.string().datetime(),
+  /** 쇼케이스 섹션 상단 프로모 타이틀 */
+  promoTitle: z.string().min(1),
 });
 export type AutoConfig = z.infer<typeof autoConfigSchema>;
 

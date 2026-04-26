@@ -39,6 +39,7 @@ function rowToConfig(row: Record<string, unknown>): AutoConfig {
     suggestedCities: row.suggested_cities ?? [],
     contentStartDate: toUtcIso(row.content_start_date) ?? defaultContentStartDate(),
     contentEndDate: toUtcIso(row.content_end_date) ?? defaultContentEndDate(),
+    promoTitle: (row.promo_title as string | null) ?? "이번 달 인기 숙소",
   });
 }
 
@@ -68,6 +69,7 @@ export async function updateAutoConfig(
   if (input.suggestedCities !== undefined) patch.suggested_cities = input.suggestedCities;
   if (input.contentStartDate !== undefined) patch.content_start_date = input.contentStartDate;
   if (input.contentEndDate !== undefined) patch.content_end_date = input.contentEndDate;
+  if (input.promoTitle !== undefined) patch.promo_title = input.promoTitle;
 
   const { data, error } = await db
     .from("showcase_auto_config")

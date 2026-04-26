@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { RegionShowcaseData } from "@/domain/hotel/showcaseTypes";
 import { getActiveShowcaseContents } from "@/infrastructure/admin/showcaseContentApi";
+import { getAutoConfig } from "@/infrastructure/admin/autoConfigApi";
 import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
 
 function contentToRegion(content: ShowcaseContent) {
@@ -17,14 +18,17 @@ function contentToRegion(content: ShowcaseContent) {
 
 export async function GET() {
   try {
-    const contents = await getActiveShowcaseContents();
+    const [contents, autoConfig] = await Promise.all([
+      getActiveShowcaseContents(),
+      getAutoConfig(),
+    ]);
 
     if (contents.length === 0) {
-      return NextResponse.json({ promoTitle: "", regions: [] } satisfies RegionShowcaseData);
+      return NextResponse.json({ promoTitle: autoConfig.promoTitle, regions: [] } satisfies RegionShowcaseData);
     }
 
     const data: RegionShowcaseData = {
-      promoTitle: contents[0].title,
+      promoTitle: autoConfig.promoTitle,
       regions: contents.map(contentToRegion),
     };
 

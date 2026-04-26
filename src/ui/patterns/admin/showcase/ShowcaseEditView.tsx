@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,54 +35,33 @@ const editFormSchema = z
 
 type EditFormValues = z.infer<typeof editFormSchema>;
 
-// ─── Props ───────────────────────────────────────────────────────────────────
+// ─── 폼 컴포넌트 (데이터가 있을 때만 마운트) ───────────────────────────────
 
-interface ShowcaseEditViewProps {
+interface ShowcaseEditFormProps {
   id: string;
+  showcase: ShowcaseContent;
 }
 
-// ─── 컴포넌트 ────────────────────────────────────────────────────────────────
-
-export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
+function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
   const queryClient = useQueryClient();
 
   const {
     register,
     control,
     handleSubmit,
-    reset,
     formState: { errors, isSubmitSuccessful },
   } = useForm<EditFormValues>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      title: "",
-      imageUrl: "",
-      serviceEnabled: true,
-      startDate: "",
-      startTime: "00:00",
-      endDate: "",
-      endTime: "23:59",
+      title: showcase.title,
+      imageUrl: showcase.imageUrl,
+      serviceEnabled: showcase.serviceEnabled,
+      startDate: format(new Date(showcase.startDate), "yyyy-MM-dd"),
+      startTime: format(new Date(showcase.startDate), "HH:mm"),
+      endDate: format(new Date(showcase.endDate), "yyyy-MM-dd"),
+      endTime: format(new Date(showcase.endDate), "HH:mm"),
     },
   });
-
-  const { data: showcase, isLoading, isError } = useQuery<ShowcaseContent | null>({
-    queryKey: ["showcase", id],
-    queryFn: () => showcaseService.getShowcaseById(id),
-  });
-
-  useEffect(() => {
-    if (showcase) {
-      reset({
-        title: showcase.title,
-        imageUrl: showcase.imageUrl,
-        serviceEnabled: showcase.serviceEnabled,
-        startDate: format(new Date(showcase.startDate), "yyyy-MM-dd"),
-        startTime: format(new Date(showcase.startDate), "HH:mm"),
-        endDate: format(new Date(showcase.endDate), "yyyy-MM-dd"),
-        endTime: format(new Date(showcase.endDate), "HH:mm"),
-      });
-    }
-  }, [showcase, reset]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<ShowcaseContent>) =>
@@ -103,38 +81,122 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
     });
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent>
-          <p className="text-center text-gray-500 py-8">컨텐츠를 불러오는 중...</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  return (
+    <Card>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <Input
+            label="타이틀"
+            placeholder="쇼케이스 타이틀을 입력하세요"
+            error={errors.title?.message}
+            {...register("title")}
+          />
 
-  if (isError) {
-    return (
-      <Card>
-        <CardContent>
-          <p className="text-center text-red-500 py-8">데이터를 불러오는 데 실패했습니다.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+          <Input
+            label="이미지 URL"
+            placeholder="https://example.com/image.jpg"
+            error={errors.imageUrl?.message}
+            {...register("imageUrl")}
+          />
 
-  if (!showcase) {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <p className="text-gray-700 mb-4">컨텐츠를 찾을 수 없습니다</p>
-          <Link href="/admin/content/showcase">
-            <Button variant="outline">목록으로 돌아가기</Button>
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
+          {/* 서비스 활성화 토글 */}
+          <div className="w-full space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">서비스 활성화</label>
+            <Controller
+              control={control}
+              name="serviceEnabled"
+              render={({ field }) => (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={field.value}
+                  onClick={() => field.onChange(!field.value)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    field.value ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      field.value ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              )}
+            />
+          </div>
+
+          {/* 노출 기간 (날짜 + 시간) */}
+          <div className="space-y-3">
+            <Controller
+              control={control}
+              name="startDate"
+              render={({ field: startField }) => (
+                <Controller
+                  control={control}
+                  name="endDate"
+                  render={({ field: endField }) => (
+                    <DateRangePicker
+                      startDate={startField.value}
+                      endDate={endField.value}
+                      onChange={(start, end) => {
+                        startField.onChange(start);
+                        endField.onChange(end);
+                      }}
+                      error={errors.startDate?.message}
+                    />
+                  )}
+                />
+              )}
+            />
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">시작 시간</label>
+                <input
+                  type="time"
+                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  {...register("startTime")}
+                />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">종료 시간</label>
+                <input
+                  type="time"
+                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  {...register("endTime")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {isSubmitSuccessful && updateMutation.isSuccess && (
+            <p className="text-sm text-green-600">저장이 완료되었습니다.</p>
+          )}
+          {updateMutation.isError && (
+            <p className="text-sm text-red-500">저장에 실패했습니다. 다시 시도해 주세요.</p>
+          )}
+
+          <div className="flex justify-end">
+            <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "저장 중..." : "저장"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── 외부 컴포넌트 (데이터 페칭 + 상태 분기) ──────────────────────────────
+
+interface ShowcaseEditViewProps {
+  id: string;
+}
+
+export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
+  const { data: showcase, isLoading, isError } = useQuery<ShowcaseContent | null>({
+    queryKey: ["showcase", id],
+    queryFn: () => showcaseService.getShowcaseById(id),
+  });
 
   return (
     <div className="space-y-6">
@@ -145,107 +207,34 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
         </Link>
       </div>
 
-      <Card>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <Input
-              label="타이틀"
-              placeholder="쇼케이스 타이틀을 입력하세요"
-              error={errors.title?.message}
-              {...register("title")}
-            />
+      {isLoading && (
+        <Card>
+          <CardContent>
+            <p className="text-center text-gray-500 py-8">컨텐츠를 불러오는 중...</p>
+          </CardContent>
+        </Card>
+      )}
 
-            <Input
-              label="이미지 URL"
-              placeholder="https://example.com/image.jpg"
-              error={errors.imageUrl?.message}
-              {...register("imageUrl")}
-            />
+      {isError && (
+        <Card>
+          <CardContent>
+            <p className="text-center text-red-500 py-8">데이터를 불러오는 데 실패했습니다.</p>
+          </CardContent>
+        </Card>
+      )}
 
-            {/* 서비스 활성화 토글 */}
-            <div className="w-full space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">서비스 활성화</label>
-              <Controller
-                control={control}
-                name="serviceEnabled"
-                render={({ field }) => (
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={field.value}
-                    onClick={() => field.onChange(!field.value)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                      field.value ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        field.value ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                )}
-              />
-            </div>
+      {!isLoading && !isError && !showcase && (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-gray-700 mb-4">컨텐츠를 찾을 수 없습니다</p>
+            <Link href="/admin/content/showcase">
+              <Button variant="outline">목록으로 돌아가기</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
-            {/* 노출 기간 (날짜 + 시간) */}
-            <div className="space-y-3">
-              <Controller
-                control={control}
-                name="startDate"
-                render={({ field: startField }) => (
-                  <Controller
-                    control={control}
-                    name="endDate"
-                    render={({ field: endField }) => (
-                      <DateRangePicker
-                        startDate={startField.value}
-                        endDate={endField.value}
-                        onChange={(start, end) => {
-                          startField.onChange(start);
-                          endField.onChange(end);
-                        }}
-                        error={errors.startDate?.message}
-                      />
-                    )}
-                  />
-                )}
-              />
-              <div className="flex gap-4">
-                <div className="flex-1 space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">시작 시간</label>
-                  <input
-                    type="time"
-                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                    {...register("startTime")}
-                  />
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">종료 시간</label>
-                  <input
-                    type="time"
-                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                    {...register("endTime")}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {isSubmitSuccessful && updateMutation.isSuccess && (
-              <p className="text-sm text-green-600">저장이 완료되었습니다.</p>
-            )}
-            {updateMutation.isError && (
-              <p className="text-sm text-red-500">저장에 실패했습니다. 다시 시도해 주세요.</p>
-            )}
-
-            <div className="flex justify-end">
-              <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "저장 중..." : "저장"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      {showcase && <ShowcaseEditForm id={id} showcase={showcase} />}
     </div>
   );
 }

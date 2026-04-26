@@ -1,17 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
 import type { AutoConfig, UpdateAutoConfigInput, IntervalType } from "@/domain/admin/autoConfig";
-import { updateAutoConfigInputSchema, getDefaultContentStartDate, getDefaultContentEndDate } from "@/domain/admin/autoConfig";
+import { intervalTypeSchema, getDefaultContentStartDate, getDefaultContentEndDate } from "@/domain/admin/autoConfig";
 import { autoConfigService } from "@/infrastructure/admin/autoConfigServiceClient";
 import { Card, CardContent } from "@/ui/components/Card";
 import { DatePicker } from "@/ui/components/DatePicker";
 import { Input } from "@/ui/components/Input";
 import { Button } from "@/ui/components/Button";
+
+// ─── 폼 스키마 ───────────────────────────────────────────────────────────────
+
+const autoConfigFormSchema = z
+  .object({
+    promoTitle: z.string().min(1, "프로모 타이틀을 입력해 주세요"),
+    enabled: z.boolean(),
+    intervalType: intervalTypeSchema,
+    intervalValue: z.coerce.number().int().positive("양의 정수를 입력해 주세요"),
+    nextDate: z.string().min(1, "날짜를 선택해 주세요"),
+    suggestedCities: z.array(z.object({ city: z.string().min(1) })),
+    contentStartDate: z.string().min(1, "시작일을 선택해 주세요"),
+    contentStartTime: z.string().min(1),
+    contentEndDate: z.string().min(1, "종료일을 선택해 주세요"),
+    contentEndTime: z.string().min(1),
+  })
+  .refine(
+    (d) =>
+      new Date(`${d.contentStartDate}T${d.contentStartTime}:00`) <
+      new Date(`${d.contentEndDate}T${d.contentEndTime}:00`),
+    { message: "시작일시는 종료일시보다 이전이어야 합니다", path: ["contentStartDate"] },
+  );
+
+type AutoConfigFormValues = z.infer<typeof autoConfigFormSchema>;
 
 // ─── 주기 타입 옵션 ─────────────────────────────────────────────────────────
 
@@ -21,22 +48,276 @@ const INTERVAL_TYPE_OPTIONS: { value: IntervalType; label: string }[] = [
   { value: "month", label: "Month" },
 ];
 
+// ─── 편집 폼 컴포넌트 (config가 있을 때만 마운트) ───────────────────────────
+
+interface AutoConfigEditFormProps {
+  config: AutoConfig;
+  onSave: (input: UpdateAutoConfigInput) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}
+
+function AutoConfigEditForm({ config, onSave, onCancel, isSaving }: AutoConfigEditFormProps) {
+  const [newCityInput, setNewCityInput] = useState("");
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<AutoConfigFormValues>({
+    resolver: zodResolver(autoConfigFormSchema),
+    defaultValues: {
+      promoTitle: config.promoTitle,
+      enabled: config.enabled,
+      intervalType: config.intervalType,
+      intervalValue: config.intervalValue,
+      nextDate: format(new Date(config.nextGenerationDate), "yyyy-MM-dd"),
+      suggestedCities: config.suggestedCities.map((city) => ({ city })),
+      contentStartDate: format(new Date(config.contentStartDate), "yyyy-MM-dd"),
+      contentStartTime: format(new Date(config.contentStartDate), "HH:mm"),
+      contentEndDate: format(new Date(config.contentEndDate), "yyyy-MM-dd"),
+      contentEndTime: format(new Date(config.contentEndDate), "HH:mm"),
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({ control, name: "suggestedCities" });
+
+  const intervalType = watch("intervalType");
+  const intervalValue = watch("intervalValue");
+  const nextDate = watch("nextDate");
+
+  const recalcDates = (type: IntervalType, value: number, dateStr: string) => {
+    if (!dateStr || !value) return;
+    const genDate = new Date(`${dateStr}T08:00:00`);
+    const start = getDefaultContentStartDate(genDate, type);
+    const end = getDefaultContentEndDate(start, type, value);
+    setValue("contentStartDate", format(start, "yyyy-MM-dd"));
+    setValue("contentStartTime", format(start, "HH:mm"));
+    setValue("contentEndDate", format(end, "yyyy-MM-dd"));
+    setValue("contentEndTime", format(end, "HH:mm"));
+  };
+
+  const handleAddCity = () => {
+    const trimmed = newCityInput.trim();
+    if (!trimmed || fields.some((f) => f.city === trimmed)) {
+      setNewCityInput("");
+      return;
+    }
+    append({ city: trimmed });
+    setNewCityInput("");
+  };
+
+  const onSubmit = (values: AutoConfigFormValues) => {
+    onSave({
+      promoTitle: values.promoTitle,
+      enabled: values.enabled,
+      intervalType: values.intervalType,
+      intervalValue: values.intervalValue,
+      nextGenerationDate: new Date(`${values.nextDate}T08:00:00`).toISOString(),
+      suggestedCities: values.suggestedCities.map((f) => f.city),
+      contentStartDate: new Date(`${values.contentStartDate}T${values.contentStartTime}:00`).toISOString(),
+      contentEndDate: new Date(`${values.contentEndDate}T${values.contentEndTime}:00`).toISOString(),
+    });
+  };
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      {/* 프로모 타이틀 */}
+      <Input
+        label="프로모 타이틀"
+        placeholder="쇼케이스 섹션 상단에 표시될 타이틀"
+        error={errors.promoTitle?.message}
+        {...register("promoTitle")}
+      />
+
+      {/* ON/OFF 토글 */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700">자동 생성 활성화</span>
+        <Controller
+          control={control}
+          name="enabled"
+          render={({ field }) => (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={field.value}
+              onClick={() => field.onChange(!field.value)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                field.value ? "bg-blue-600" : "bg-gray-200"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  field.value ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          )}
+        />
+      </div>
+
+      {/* 주기 타입 + 값 */}
+      <div className="flex gap-3">
+        <div className="w-full space-y-1.5">
+          <label className="text-sm font-medium text-gray-700">주기 타입</label>
+          <Controller
+            control={control}
+            name="intervalType"
+            render={({ field }) => (
+              <select
+                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                value={field.value}
+                onChange={(e) => {
+                  const newType = e.target.value as IntervalType;
+                  field.onChange(newType);
+                  recalcDates(newType, intervalValue, nextDate);
+                }}
+              >
+                {INTERVAL_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            )}
+          />
+        </div>
+        <Input
+          label="주기 값"
+          type="number"
+          min={1}
+          error={errors.intervalValue?.message}
+          {...register("intervalValue", {
+            onChange: (e) => recalcDates(intervalType, Number(e.target.value), nextDate),
+          })}
+        />
+      </div>
+
+      {/* 다음 생성 대상 도시 */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-gray-700">다음 생성 대상 도시</label>
+        <div className="flex flex-wrap gap-1.5 min-h-[32px] rounded-md border border-gray-300 bg-white p-2">
+          {fields.map((field, index) => (
+            <span
+              key={field.id}
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700"
+            >
+              {field.city}
+              <button
+                type="button"
+                onClick={() => remove(index)}
+                className="ml-0.5 text-blue-400 hover:text-blue-600"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="도시명 입력 후 추가"
+            value={newCityInput}
+            onChange={(e) => setNewCityInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddCity();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" size="sm" onClick={handleAddCity} className="shrink-0">
+            추가
+          </Button>
+        </div>
+      </div>
+
+      {/* 다음 생성일 */}
+      <Controller
+        control={control}
+        name="nextDate"
+        render={({ field }) => (
+          <DatePicker
+            label="다음 생성일"
+            value={field.value}
+            onChange={(date) => {
+              field.onChange(date);
+              recalcDates(intervalType, intervalValue, date);
+            }}
+            error={errors.nextDate?.message}
+          />
+        )}
+      />
+      <p className="text-xs text-gray-400 -mt-2">오전 8시에 자동 생성됩니다</p>
+
+      {/* 컨텐츠 노출 기간 */}
+      <div className="space-y-3">
+        <label className="text-sm font-medium text-gray-700">컨텐츠 노출 기간</label>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Controller
+              control={control}
+              name="contentStartDate"
+              render={({ field }) => (
+                <DatePicker
+                  label="시작일"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.contentStartDate?.message}
+                />
+              )}
+            />
+          </div>
+          <div className="w-32 space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">시간</label>
+            <input
+              type="time"
+              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+              {...register("contentStartTime")}
+            />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Controller
+              control={control}
+              name="contentEndDate"
+              render={({ field }) => (
+                <DatePicker
+                  label="종료일"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+          <div className="w-32 space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">시간</label>
+            <input
+              type="time"
+              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+              {...register("contentEndTime")}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>취소</Button>
+        <Button type="submit" variant="primary" size="sm" disabled={isSaving}>
+          {isSaving ? "저장 중..." : "저장"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 // ─── AutoConfigPanel 컴포넌트 ───────────────────────────────────────────────
 
-/** 쇼케이스 자동 생성 설정 패널 */
 export function AutoConfigPanel() {
   const queryClient = useQueryClient();
-
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [formValues, setFormValues] = useState<UpdateAutoConfigInput>({});
-  const [nextDateStr, setNextDateStr] = useState("");
-  const [contentStartDate, setContentStartDate] = useState("");
-  const [contentStartTime, setContentStartTime] = useState("00:00");
-  const [contentEndDate, setContentEndDate] = useState("");
-  const [contentEndTime, setContentEndTime] = useState("23:59");
-  const [newCityInput, setNewCityInput] = useState("");
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const { data: config, isLoading, isError } = useQuery<AutoConfig>({
     queryKey: ["autoConfig"],
@@ -44,8 +325,7 @@ export function AutoConfigPanel() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (input: UpdateAutoConfigInput) =>
-      autoConfigService.updateAutoConfig(input),
+    mutationFn: (input: UpdateAutoConfigInput) => autoConfigService.updateAutoConfig(input),
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: ["autoConfig"] });
       const previous = queryClient.getQueryData<AutoConfig>(["autoConfig"]);
@@ -62,79 +342,8 @@ export function AutoConfigPanel() {
     },
   });
 
-  /** 편집 모드 진입 */
-  const handleStartEdit = () => {
-    if (!config) return;
-    setFormValues({
-      enabled: config.enabled,
-      intervalType: config.intervalType,
-      intervalValue: config.intervalValue,
-      suggestedCities: config.suggestedCities,
-    });
-    // ISO → date만 추출 (시간은 08:00 고정)
-    const d = new Date(config.nextGenerationDate);
-    setNextDateStr(format(d, "yyyy-MM-dd"));
-    setContentStartDate(format(new Date(config.contentStartDate), "yyyy-MM-dd"));
-    setContentStartTime(format(new Date(config.contentStartDate), "HH:mm"));
-    setContentEndDate(format(new Date(config.contentEndDate), "yyyy-MM-dd"));
-    setContentEndTime(format(new Date(config.contentEndDate), "HH:mm"));
-    setValidationErrors({});
-    setIsEditing(true);
-  };
-
-  /** 편집 취소 */
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setFormValues({});
-    setNewCityInput("");
-    setContentStartDate("");
-    setContentStartTime("00:00");
-    setContentEndDate("");
-    setContentEndTime("23:59");
-    setValidationErrors({});
-  };
-
-  /** 도시 추가 */
-  const handleAddCity = () => {
-    const trimmed = newCityInput.trim();
-    if (!trimmed) return;
-    const current = formValues.suggestedCities ?? [];
-    if (current.includes(trimmed)) {
-      setNewCityInput("");
-      return;
-    }
-    setFormValues((prev) => ({
-      ...prev,
-      suggestedCities: [...(prev.suggestedCities ?? []), trimmed],
-    }));
-    setNewCityInput("");
-  };
-
-  /** 저장 핸들러 */
-  const handleSave = () => {
-    // nextGenerationDate: 날짜 + 08:00 고정
-    const nextGenIso = nextDateStr
-      ? new Date(`${nextDateStr}T08:00:00`).toISOString()
-      : undefined;
-    const contentStartIso = contentStartDate
-      ? new Date(`${contentStartDate}T${contentStartTime}:00`).toISOString()
-      : undefined;
-    const contentEndIso = contentEndDate
-      ? new Date(`${contentEndDate}T${contentEndTime}:00`).toISOString()
-      : undefined;
-
-    const payload = { ...formValues, nextGenerationDate: nextGenIso, contentStartDate: contentStartIso, contentEndDate: contentEndIso };
-    const result = updateAutoConfigInputSchema.safeParse(payload);
-    if (!result.success) {
-      const errors: Record<string, string> = {};
-      for (const issue of result.error.issues) {
-        errors[issue.path.join(".")] = issue.message;
-      }
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors({});
-    updateMutation.mutate(result.data, { onSuccess: () => setIsEditing(false) });
+  const handleSave = (input: UpdateAutoConfigInput) => {
+    updateMutation.mutate(input, { onSuccess: () => setIsEditing(false) });
   };
 
   if (isLoading) {
@@ -158,7 +367,7 @@ export function AutoConfigPanel() {
   return (
     <Card>
       <CardContent className="py-3 px-4">
-        {/* 헤더: 타이틀 + ON/OFF 태그 + 다음 생성일 + 펼치기/접기 */}
+        {/* 헤더 */}
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
@@ -174,9 +383,7 @@ export function AutoConfigPanel() {
             {config.enabled && (
               <span className="text-xs text-gray-400">
                 다음 생성: {format(new Date(config.nextGenerationDate), "M월 d일 (EEE) HH:mm", { locale: ko })}
-                {config.suggestedCities.length > 0 && (
-                  <> · {config.suggestedCities.join(", ")}</>
-                )}
+                {config.suggestedCities.length > 0 && <> · {config.suggestedCities.join(", ")}</>}
                 {" · "}노출: {format(new Date(config.contentStartDate), "M/d")}~{format(new Date(config.contentEndDate), "M/d")}
               </span>
             )}
@@ -189,12 +396,14 @@ export function AutoConfigPanel() {
           </svg>
         </button>
 
-        {/* 펼쳐진 내용 */}
         {isExpanded && (
           <div className="mt-4 space-y-4">
-            {/* 읽기 모드 */}
             {!isEditing && (
               <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">프로모 타이틀</span>
+                  <span className="text-gray-900">{config.promoTitle}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">상태</span>
                   <span className={config.enabled ? "text-green-600 font-medium" : "text-gray-500"}>
@@ -217,7 +426,7 @@ export function AutoConfigPanel() {
                   <div className="flex justify-between">
                     <span className="text-gray-500">컨텐츠 노출 기간</span>
                     <span className="text-gray-900">
-                      {format(new Date(config.contentStartDate), "yyyy-MM-dd HH:mm:ss")} ~ {format(new Date(config.contentEndDate), "yyyy-MM-dd HH:mm:ss")}
+                      {format(new Date(config.contentStartDate), "yyyy-MM-dd HH:mm")} ~ {format(new Date(config.contentEndDate), "yyyy-MM-dd HH:mm")}
                     </span>
                   </div>
                 )}
@@ -231,184 +440,22 @@ export function AutoConfigPanel() {
                         </span>
                       ))}
                     </div>
-                    <p className="mt-1 text-xs text-gray-400">AI가 추출한 추천 도시입니다. 수정 버튼을 눌러 변경할 수 있습니다.</p>
                   </div>
                 )}
                 <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={handleStartEdit}>수정</Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>수정</Button>
                 </div>
               </div>
             )}
 
-            {/* 편집 모드 */}
             {isEditing && (
-              <div className="space-y-4">
-                {/* ON/OFF 토글 */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">자동 생성 활성화</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={formValues.enabled ?? false}
-                    onClick={() => setFormValues((prev) => ({ ...prev, enabled: !prev.enabled }))}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                      formValues.enabled ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      formValues.enabled ? "translate-x-5" : "translate-x-0"
-                    }`} />
-                  </button>
-                </div>
-                {/* 주기 타입 + 값 */}
-                <div className="flex gap-3">
-                  <div className="w-full space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">주기 타입</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                      value={formValues.intervalType ?? "day"}
-                      onChange={(e) => {
-                        const newType = e.target.value as IntervalType;
-                        setFormValues((prev) => ({ ...prev, intervalType: newType }));
-                        // intervalType 변경 시 노출 기간 디폴트 재계산
-                        if (nextDateStr) {
-                          const genDate = new Date(`${nextDateStr}T08:00:00`);
-                          const newValue = formValues.intervalValue ?? 1;
-                          const start = getDefaultContentStartDate(genDate, newType);
-                          const end = getDefaultContentEndDate(start, newType, newValue);
-                          setContentStartDate(format(start, "yyyy-MM-dd"));
-                          setContentStartTime(format(start, "HH:mm"));
-                          setContentEndDate(format(end, "yyyy-MM-dd"));
-                          setContentEndTime(format(end, "HH:mm"));
-                        }
-                      }}
-                    >
-                      {INTERVAL_TYPE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <Input
-                    label="주기 값"
-                    type="number"
-                    min={1}
-                    value={formValues.intervalValue ?? ""}
-                    onChange={(e) => {
-                      const newValue = e.target.value ? Number(e.target.value) : undefined;
-                      setFormValues((prev) => ({ ...prev, intervalValue: newValue }));
-                      // intervalValue 변경 시 노출 기간 디폴트 재계산
-                      if (nextDateStr && newValue) {
-                        const genDate = new Date(`${nextDateStr}T08:00:00`);
-                        const type = formValues.intervalType ?? "day";
-                        const start = getDefaultContentStartDate(genDate, type);
-                        const end = getDefaultContentEndDate(start, type, newValue);
-                        setContentStartDate(format(start, "yyyy-MM-dd"));
-                        setContentStartTime(format(start, "HH:mm"));
-                        setContentEndDate(format(end, "yyyy-MM-dd"));
-                        setContentEndTime(format(end, "HH:mm"));
-                      }
-                    }}
-                    error={validationErrors["intervalValue"]}
-                  />
-                </div>
-                {/* 다음 생성 대상 도시 (추가/삭제 가능) */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">다음 생성 대상 도시</label>
-                  <div className="flex flex-wrap gap-1.5 min-h-[32px] rounded-md border border-gray-300 bg-white p-2">
-                    {(formValues.suggestedCities ?? []).map((city) => (
-                      <span key={city} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                        {city}
-                        <button
-                          type="button"
-                          onClick={() => setFormValues((prev) => ({
-                            ...prev,
-                            suggestedCities: (prev.suggestedCities ?? []).filter((c) => c !== city),
-                          }))}
-                          className="ml-0.5 text-blue-400 hover:text-blue-600"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="도시명 입력 후 추가"
-                      value={newCityInput}
-                      onChange={(e) => setNewCityInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddCity();
-                        }
-                      }}
-                    />
-                    <Button variant="outline" size="sm" onClick={handleAddCity} className="shrink-0">
-                      추가
-                    </Button>
-                  </div>
-                </div>
-                {/* 다음 생성일 (날짜만, 시간은 08:00 고정) */}
-                <DatePicker
-                  label="다음 생성일"
-                  value={nextDateStr}
-                  onChange={(date) => setNextDateStr(date)}
-                  error={validationErrors["nextGenerationDate"]}
-                />
-                <p className="text-xs text-gray-400 -mt-2">오전 8시에 자동 생성됩니다</p>
-                {/* 컨텐츠 노출 기간 */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-700">컨텐츠 노출 기간</label>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <DatePicker
-                        label="시작일"
-                        value={contentStartDate}
-                        onChange={(date) => setContentStartDate(date)}
-                      />
-                    </div>
-                    <div className="w-32 space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">시간</label>
-                      <input
-                        type="time"
-                        value={contentStartTime}
-                        onChange={(e) => setContentStartTime(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <DatePicker
-                        label="종료일"
-                        value={contentEndDate}
-                        onChange={(date) => setContentEndDate(date)}
-                      />
-                    </div>
-                    <div className="w-32 space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">시간</label>
-                      <input
-                        type="time"
-                        value={contentEndTime}
-                        onChange={(e) => setContentEndTime(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                  {validationErrors["contentStartDate"] && (
-                    <p className="text-xs text-red-500">{validationErrors["contentStartDate"]}</p>
-                  )}
-                </div>
-                {validationErrors["nextGenerationDate"] && (
-                  <p className="text-xs text-red-500">{validationErrors["nextGenerationDate"]}</p>
-                )}
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" size="sm" onClick={handleCancelEdit}>취소</Button>
-                  <Button variant="primary" size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
-                    {updateMutation.isPending ? "저장 중..." : "저장"}
-                  </Button>
-                </div>
-              </div>
+              <AutoConfigEditForm
+                key={config.contentStartDate}
+                config={config}
+                onSave={handleSave}
+                onCancel={() => setIsEditing(false)}
+                isSaving={updateMutation.isPending}
+              />
             )}
           </div>
         )}
