@@ -6,15 +6,18 @@ import {
   type UpdateAutoConfigInput,
 } from "@/domain/admin/autoConfig";
 
+const toUtcIso = (v: unknown) =>
+  v ? new Date(v as string).toISOString() : v;
+
 function rowToConfig(row: Record<string, unknown>): AutoConfig {
   return autoConfigSchema.parse({
     enabled: row.enabled,
     intervalType: row.interval_type,
     intervalValue: row.interval_value,
-    nextGenerationDate: row.next_generation_date,
+    nextGenerationDate: toUtcIso(row.next_generation_date),
     suggestedCities: row.suggested_cities ?? [],
-    contentStartDate: row.content_start_date,
-    contentEndDate: row.content_end_date,
+    contentStartDate: toUtcIso(row.content_start_date),
+    contentEndDate: toUtcIso(row.content_end_date),
   });
 }
 

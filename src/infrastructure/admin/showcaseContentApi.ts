@@ -7,6 +7,9 @@ import {
 } from "@/domain/admin/showcaseContent";
 import type { PaginatedResponse, PaginationParams } from "@/domain/admin/pagination";
 
+const toUtcIso = (v: unknown) =>
+  v ? new Date(v as string).toISOString() : v;
+
 function rowToContent(row: Record<string, unknown>): ShowcaseContent {
   return showcaseContentSchema.parse({
     id: row.id,
@@ -15,10 +18,10 @@ function rowToContent(row: Record<string, unknown>): ShowcaseContent {
     imageUrl: row.image_url,
     hotels: row.hotels,
     serviceEnabled: row.service_enabled,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    startDate: toUtcIso(row.start_date),
+    endDate: toUtcIso(row.end_date),
+    createdAt: toUtcIso(row.created_at),
+    updatedAt: toUtcIso(row.updated_at),
   });
 }
 
