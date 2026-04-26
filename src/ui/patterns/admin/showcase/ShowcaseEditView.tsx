@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { z } from "zod";
 
 import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
@@ -51,7 +52,9 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
   const [imageUrl, setImageUrl] = useState("");
   const [serviceEnabled, setServiceEnabled] = useState(true);
   const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("00:00");
   const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("23:59");
   const [errors, setErrors] = useState<FormErrors>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -71,9 +74,10 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
       setTitle(showcase.title);
       setImageUrl(showcase.imageUrl);
       setServiceEnabled(showcase.serviceEnabled);
-      // ISO datetime을 date input 형식(YYYY-MM-DD)으로 변환
-      setStartDate(showcase.startDate.split("T")[0]);
-      setEndDate(showcase.endDate.split("T")[0]);
+      setStartDate(format(new Date(showcase.startDate), "yyyy-MM-dd"));
+      setStartTime(format(new Date(showcase.startDate), "HH:mm"));
+      setEndDate(format(new Date(showcase.endDate), "yyyy-MM-dd"));
+      setEndTime(format(new Date(showcase.endDate), "HH:mm"));
     }
   }, [showcase]);
 
@@ -108,13 +112,12 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
       return;
     }
 
-    // 날짜를 ISO 형식으로 변환하여 저장
     updateMutation.mutate({
       title,
       imageUrl,
       serviceEnabled,
-      startDate: new Date(startDate).toISOString(),
-      endDate: new Date(endDate).toISOString(),
+      startDate: new Date(`${startDate}T${startTime}:00`).toISOString(),
+      endDate: new Date(`${endDate}T${endTime}:00`).toISOString(),
     });
   };
 
@@ -208,16 +211,38 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
               </button>
             </div>
 
-            {/* 노출 기간 (캘린더 선택) */}
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onChange={(start, end) => {
-                setStartDate(start);
-                setEndDate(end);
-              }}
-              error={errors.startDate}
-            />
+            {/* 노출 기간 (날짜 + 시간) */}
+            <div className="space-y-3">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                }}
+                error={errors.startDate}
+              />
+              <div className="flex gap-4">
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">시작 시간</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">종료 시간</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* 저장 성공 메시지 */}
             {saveSuccess && (
