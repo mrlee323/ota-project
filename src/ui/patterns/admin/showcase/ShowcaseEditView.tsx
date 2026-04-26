@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
-import { mockShowcaseService } from "@/infrastructure/admin/mockShowcaseService";
+import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
 import { DateRangePicker } from "@/ui/components/DateRangePicker";
@@ -62,7 +62,7 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
     isError,
   } = useQuery<ShowcaseContent | null>({
     queryKey: ["showcase", id],
-    queryFn: () => mockShowcaseService.getShowcaseById(id),
+    queryFn: () => showcaseService.getShowcaseById(id),
   });
 
   // 조회된 데이터로 폼 초기화
@@ -80,7 +80,7 @@ export function ShowcaseEditView({ id }: ShowcaseEditViewProps) {
   // 수정 뮤테이션
   const updateMutation = useMutation({
     mutationFn: (data: Partial<ShowcaseContent>) =>
-      mockShowcaseService.updateShowcase(id, data),
+      showcaseService.updateShowcase(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["showcase"] });
       setSaveSuccess(true);

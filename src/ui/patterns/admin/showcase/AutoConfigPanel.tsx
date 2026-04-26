@@ -7,7 +7,7 @@ import { ko } from "date-fns/locale";
 
 import type { AutoConfig, UpdateAutoConfigInput, IntervalType } from "@/domain/admin/autoConfig";
 import { updateAutoConfigInputSchema, getDefaultContentStartDate, getDefaultContentEndDate } from "@/domain/admin/autoConfig";
-import { mockAutoConfigService } from "@/infrastructure/admin/mockAutoConfigService";
+import { autoConfigService } from "@/infrastructure/admin/autoConfigServiceClient";
 import { Card, CardContent } from "@/ui/components/Card";
 import { DatePicker } from "@/ui/components/DatePicker";
 import { Input } from "@/ui/components/Input";
@@ -40,12 +40,12 @@ export function AutoConfigPanel() {
 
   const { data: config, isLoading, isError } = useQuery<AutoConfig>({
     queryKey: ["autoConfig"],
-    queryFn: () => mockAutoConfigService.getAutoConfig(),
+    queryFn: () => autoConfigService.getAutoConfig(),
   });
 
   const updateMutation = useMutation({
     mutationFn: (input: UpdateAutoConfigInput) =>
-      mockAutoConfigService.updateAutoConfig(input),
+      autoConfigService.updateAutoConfig(input),
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: ["autoConfig"] });
       const previous = queryClient.getQueryData<AutoConfig>(["autoConfig"]);

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useMachine } from "@xstate/react";
 import { showcaseCreationMachine } from "@/application/admin/showcaseCreationMachine";
-import { mockShowcaseService } from "@/infrastructure/admin/mockShowcaseService";
+import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
 import { CityInputStep } from "./steps/CityInputStep";
@@ -136,7 +136,7 @@ function LoadingIndicator({ message }: { message: string }) {
 /** 쇼케이스 생성 위저드 - XState v5 상태 머신 기반 단계별 플로우 */
 export function ShowcaseCreationWizard() {
   const [state, send] = useMachine(showcaseCreationMachine, {
-    input: { showcaseService: mockShowcaseService },
+    input: { showcaseService: showcaseService },
   });
 
   /** 현재 상태값 (문자열) */

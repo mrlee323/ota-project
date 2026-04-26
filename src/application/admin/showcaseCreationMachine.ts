@@ -1,7 +1,7 @@
 import { setup, assign, fromPromise } from "xstate";
 import type { ShowcaseHotelCard } from "@/domain/hotel/showcaseTypes";
 import type { ShowcaseCreationDraft } from "@/domain/admin/showcaseContent";
-import type { ShowcaseService } from "@/infrastructure/admin/mockShowcaseService";
+import type { ShowcaseService } from "@/infrastructure/admin/mockShowcaseService"; // 인터페이스만 참조
 
 // ─── 상태 머신 컨텍스트 타입 정의 ────────────────────────────────────────────
 

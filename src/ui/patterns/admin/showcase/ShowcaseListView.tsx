@@ -6,7 +6,7 @@ import { format } from "date-fns";
 
 import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
 import { isShowcaseExpired, isShowcaseActive } from "@/domain/admin/showcaseContent";
-import { mockShowcaseService } from "@/infrastructure/admin/mockShowcaseService";
+import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
 import { AutoConfigPanel } from "./AutoConfigPanel";
@@ -23,13 +23,13 @@ export function ShowcaseListView() {
     isError,
   } = useQuery<ShowcaseContent[]>({
     queryKey: ["showcase", "list"],
-    queryFn: () => mockShowcaseService.getShowcaseList(),
+    queryFn: () => showcaseService.getShowcaseList(),
   });
 
   // serviceEnabled 토글 뮤테이션 (낙관적 업데이트)
   const toggleMutation = useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
-      mockShowcaseService.toggleServiceEnabled(id, enabled),
+      showcaseService.toggleServiceEnabled(id, enabled),
     onMutate: async ({ id, enabled }) => {
       await queryClient.cancelQueries({ queryKey: ["showcase", "list"] });
       const previous = queryClient.getQueryData<ShowcaseContent[]>(["showcase", "list"]);
