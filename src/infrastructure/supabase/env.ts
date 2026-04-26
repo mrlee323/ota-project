@@ -8,8 +8,16 @@ export const supabaseEnvSchema = z.object({
     .min(1, "Supabase Anon Key가 필요합니다"),
 });
 
+/** Supabase 서비스 롤 환경 변수 스키마 (서버 전용) */
+export const supabaseServiceEnvSchema = supabaseEnvSchema.extend({
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .min(1, "Supabase Service Role Key가 필요합니다"),
+});
+
 /** 검증된 환경 변수 타입 */
 export type SupabaseEnv = z.infer<typeof supabaseEnvSchema>;
+export type SupabaseServiceEnv = z.infer<typeof supabaseServiceEnvSchema>;
 
 /** 캐싱된 환경 변수 (런타임 중 변경되지 않으므로 한 번만 파싱) */
 let cachedEnv: SupabaseEnv | null = null;
@@ -30,4 +38,19 @@ export function validateSupabaseEnv(): SupabaseEnv {
   });
 
   return cachedEnv;
+}
+
+let cachedServiceEnv: SupabaseServiceEnv | null = null;
+
+/** service_role 키를 포함한 환경 변수를 검증한다. 서버 사이드 전용. */
+export function validateSupabaseServiceEnv(): SupabaseServiceEnv {
+  if (cachedServiceEnv) return cachedServiceEnv;
+
+  cachedServiceEnv = supabaseServiceEnvSchema.parse({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
+
+  return cachedServiceEnv;
 }
