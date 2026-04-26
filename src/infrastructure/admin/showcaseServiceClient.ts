@@ -59,11 +59,12 @@ export const showcaseService: ShowcaseService = {
   },
 
   // Phase 4에서 n8n으로 교체 예정
-  async generateTitle(cityName: string): Promise<string> {
+  async generateTitle(cityName: string, prompt?: string): Promise<string> {
+    if (prompt) return `${cityName} — ${prompt}`;
     return `${cityName} 인기 호텔 모음`;
   },
 
-  async generateImage(cityName: string): Promise<string> {
+  async generateImage(cityName: string, _title: string, _prompt?: string): Promise<string> {
     const imageMap: Record<string, string> = {
       교토: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&q=80",
       제주: "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?w=1200&q=80",

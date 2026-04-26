@@ -57,11 +57,10 @@ export const paymentMachine = setup({
   },
   guards: {
     /** PROCESSING 상태에서 중복 START_PAYMENT 이벤트 차단 */
-    isNotProcessing: ({ context: _ctx }, _params) => {
-      // 이 guard는 PROCESSING 상태에서 START_PAYMENT 이벤트를 차단하기 위해 사용
-      // PROCESSING 상태에서 호출되면 항상 false를 반환하여 전이를 막는다
-      return false;
-    },
+    isNotProcessing: () => false,
+  },
+  delays: {
+    paymentTimeout: () => DEFAULT_TIMEOUT_MS,
   },
   actions: {
     /** INITIALIZE 이벤트 데이터로 컨텍스트 초기화 */
@@ -176,7 +175,7 @@ export const paymentMachine = setup({
       on: {
         // 중복 START_PAYMENT 이벤트는 guard로 차단
         START_PAYMENT: {
-          guard: "isNotProcessing",
+          guard: ({ }) => false,
           target: "PROCESSING",
         },
         PAYMENT_RESPONSE: [

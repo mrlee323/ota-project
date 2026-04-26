@@ -1,6 +1,5 @@
 import { HotelSummary } from '@/domain/hotel/types';
 import { Card } from '@/ui/components/Card';
-import { Badge } from '@/ui/components/Badge';
 import { Button } from '@/ui/components/Button';
 import { cn } from '@/lib/utils/tw';
 
@@ -26,12 +25,9 @@ export const HotelListCard = ({ hotel, onClick }: HotelListCardProps) => {
             alt={hotel.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          <Badge 
-            variant="neutral" 
-            className="absolute top-2 left-2 bg-white/80 backdrop-blur-sm"
-          >
+          <span className="absolute top-2 left-2 inline-flex items-center rounded px-2 py-0.5 text-[11px] font-medium text-gray-600 bg-white/80 backdrop-blur-sm">
             {hotel.type}
-          </Badge>
+          </span>
         </div>
 
         {/* 우측: 호텔 정보 영역 */}
