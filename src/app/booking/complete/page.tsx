@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { completePageParamsSchema } from "@/domain/booking/schemas";
@@ -20,6 +21,14 @@ function parseChildrenAges(raw: string): number[] {
 
 /** 예약 완료 페이지 — 쿼리 파라미터 검증 후 완료 화면 렌더링 */
 export default function BookingCompletePage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><p className="text-sm text-gray-500">로딩 중...</p></div>}>
+      <BookingCompleteContent />
+    </Suspense>
+  );
+}
+
+function BookingCompleteContent() {
   const searchParams = useSearchParams();
 
   // 쿼리 파라미터를 객체로 변환 후 Zod 스키마로 검증

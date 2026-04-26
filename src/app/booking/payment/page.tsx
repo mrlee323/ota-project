@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import {
   paymentPageParamsSchema,
@@ -81,6 +81,14 @@ function PaymentInner({ params }: { params: PaymentPageParams }) {
 // ─── 결제 페이지 (외부 컴포넌트) ─────────────────────────────────────────────
 // 쿼리 파라미터 검증 후 PaymentProvider로 감싸서 내부 컴포넌트 렌더링
 export default function BookingPaymentPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><p className="text-sm text-gray-500">로딩 중...</p></div>}>
+      <BookingPaymentContent />
+    </Suspense>
+  );
+}
+
+function BookingPaymentContent() {
   const searchParams = useSearchParams();
 
   // 쿼리 파라미터를 객체로 변환 후 Zod 스키마로 검증

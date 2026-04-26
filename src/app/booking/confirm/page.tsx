@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { confirmPageParamsSchema } from "@/domain/booking/schemas";
@@ -12,6 +12,14 @@ import type { SearchParams } from "@/domain/search/types";
 
 /** 예약 확인 페이지 — 쿼리 파라미터 + 영속화 저장소에서 데이터를 조합하여 예약 폼 렌더링 */
 export default function BookingConfirmPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><p className="text-sm text-gray-500">로딩 중...</p></div>}>
+      <BookingConfirmContent />
+    </Suspense>
+  );
+}
+
+function BookingConfirmContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
