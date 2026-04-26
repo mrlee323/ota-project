@@ -31,8 +31,7 @@ export function ScrollContainer({ children, scrollAmount = 540 }: ScrollContaine
 
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-2 scroll-smooth"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        className="flex gap-4 overflow-x-auto pb-2 scroll-smooth scrollbar-hide"
       >
         {children}
       </div>

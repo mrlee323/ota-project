@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 스크롤바 숨김 유틸리티 — 가로 스크롤 영역에서 스크롤바를 숨긴다 */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
