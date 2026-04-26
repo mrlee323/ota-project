@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { validateSupabaseEnv } from "./infrastructure/supabase/env";
 
 // 인증이 필요한 보호된 경로 목록
-const PROTECTED_ROUTES = ["/mypage"];
+const PROTECTED_ROUTES = ["/mypage", "/admin"];
 // 인증된 사용자가 접근하면 홈으로 리다이렉트할 경로
 const AUTH_ROUTES = ["/login"];
 
