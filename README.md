@@ -3,6 +3,18 @@
 AI 에이전트와 자동화 스크립트를 활용하여 극도의 개발 생산성을 지향하는 **Next.js 14** 기반 프로젝트입니다.
 단순한 코드 작성을 넘어, **DDD(Domain-Driven Design)** 아키텍처와 **AI 자동화 파이프라인**을 통해 지속 가능한 소프트웨어를 구축합니다.
 
+🔗 **Live Demo**: [https://ota-project.vercel.app](https://ota-project.vercel.app)
+
+---
+
+## 🔐 어드민 접속 방법
+
+1. [https://ota-project.vercel.app/login](https://ota-project.vercel.app/login) 접속
+2. 테스트 계정으로 로그인
+   - ID: `admin@gmail.com`
+   - PW: `admin1234`
+3. 로그인 후 [/admin](https://ota-project.vercel.app/admin) 페이지에서 관리자 기능 사용
+
 ---
 
 ## 🛠 Getting Started
