@@ -10,7 +10,7 @@ export const supabaseEnvSchema = z.object({
 
 /** Supabase 서비스 롤 환경 변수 스키마 (서버 전용) */
 export const supabaseServiceEnvSchema = supabaseEnvSchema.extend({
-  SUPABASE_SERVICE_ROLE_KEY: z
+  NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY: z
     .string()
     .min(1, "Supabase Service Role Key가 필요합니다"),
 });
@@ -49,7 +49,8 @@ export function validateSupabaseServiceEnv(): SupabaseServiceEnv {
   cachedServiceEnv = supabaseServiceEnvSchema.parse({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:
+      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
   });
 
   return cachedServiceEnv;
