@@ -78,11 +78,12 @@ export const showcaseService: ShowcaseService = {
     );
   },
 
-  async generateHotels(cityName: string): Promise<ShowcaseHotelCard[]> {
+  async generateHotels(cityName: string, title?: string, prompt?: string): Promise<ShowcaseHotelCard[]> {
+    const seed = [cityName, title, prompt].filter(Boolean).join(" ");
     return [
       {
         id: `${cityName}-gen-001`,
-        name: `${cityName} 대표 호텔`,
+        name: seed ? `${seed} 대표 호텔` : `${cityName} 대표 호텔`,
         location: cityName,
         imageUrl:
           "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=480&q=80",

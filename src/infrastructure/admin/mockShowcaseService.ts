@@ -31,7 +31,7 @@ export interface ShowcaseService {
   /** 이미지 생성 (AI mock) */
   generateImage(cityName: string, title: string, prompt?: string): Promise<string>;
   /** 호텔 목록 생성 (AI mock) */
-  generateHotels(cityName: string): Promise<ShowcaseHotelCard[]>;
+  generateHotels(cityName: string, title?: string, prompt?: string): Promise<ShowcaseHotelCard[]>;
 }
 
 // ─── 유틸리티 ───────────────────────────────────────────────────────────────
@@ -275,7 +275,7 @@ export const mockShowcaseService: ShowcaseService = {
       title: draft.title,
       imageUrl: draft.imageUrl,
       hotels: draft.hotels,
-      serviceEnabled: true,
+      serviceEnabled: draft.serviceEnabled ?? true,
       startDate: draft.startDate,
       endDate: draft.endDate,
       createdAt: now,
@@ -345,8 +345,9 @@ export const mockShowcaseService: ShowcaseService = {
   },
 
   /** 호텔 목록 생성 (AI mock - 도시별 호텔 카드 반환) */
-  async generateHotels(cityName: string): Promise<ShowcaseHotelCard[]> {
+  async generateHotels(cityName: string, title?: string, prompt?: string): Promise<ShowcaseHotelCard[]> {
     await delay(randomDelay());
+    const hotelSeed = [cityName, title, prompt].filter(Boolean).join(" ");
     // 도시별 미리 정의된 호텔 데이터 반환, 없으면 기본 호텔 3건 생성
     if (mockHotelsByCity[cityName]) {
       return [...mockHotelsByCity[cityName]];
@@ -354,7 +355,7 @@ export const mockShowcaseService: ShowcaseService = {
     return [
       {
         id: `hotel-${cityName}-001`,
-        name: `${cityName} 센트럴 호텔`,
+        name: hotelSeed ? `${hotelSeed} 센트럴 호텔` : `${cityName} 센트럴 호텔`,
         location: `${cityName} 중심가`,
         imageUrl: `https://example.com/hotels/${encodeURIComponent(cityName)}-central.jpg`,
         stars: 4,
@@ -367,7 +368,7 @@ export const mockShowcaseService: ShowcaseService = {
       },
       {
         id: `hotel-${cityName}-002`,
-        name: `${cityName} 비즈니스 인`,
+        name: hotelSeed ? `${hotelSeed} 비즈니스 인` : `${cityName} 비즈니스 인`,
         location: `${cityName} 역 근처`,
         imageUrl: `https://example.com/hotels/${encodeURIComponent(cityName)}-business.jpg`,
         stars: 3,
@@ -379,7 +380,7 @@ export const mockShowcaseService: ShowcaseService = {
       },
       {
         id: `hotel-${cityName}-003`,
-        name: `${cityName} 프리미엄 리조트`,
+        name: hotelSeed ? `${hotelSeed} 프리미엄 리조트` : `${cityName} 프리미엄 리조트`,
         location: `${cityName} 외곽`,
         imageUrl: `https://example.com/hotels/${encodeURIComponent(cityName)}-resort.jpg`,
         stars: 5,

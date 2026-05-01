@@ -80,7 +80,7 @@ export async function createShowcaseContent(
       title: draft.title,
       image_url: draft.imageUrl,
       hotels: draft.hotels,
-      service_enabled: false,
+      service_enabled: draft.serviceEnabled ?? true,
       start_date: draft.startDate,
       end_date: draft.endDate,
     })
