@@ -2,6 +2,11 @@ import { setup, assign, fromPromise } from "xstate";
 import type { ShowcaseHotelCard } from "@/domain/hotel/showcaseTypes";
 import type { ShowcaseCreationDraft } from "@/domain/admin/showcaseContent";
 import type { ShowcaseService } from "@/infrastructure/admin/mockShowcaseService"; // 인터페이스만 참조
+import {
+  generateShowcaseHotels,
+  generateShowcaseImage,
+  generateShowcaseTitle,
+} from "@/infrastructure/admin/showcaseGeneration";
 
 // ─── 상태 머신 컨텍스트 타입 정의 ────────────────────────────────────────────
 
@@ -74,18 +79,26 @@ export const showcaseCreationMachine = setup({
   actors: {
     /** 타이틀 생성 비동기 액터 */
     generateTitle: fromPromise<string, { cityName: string; prompt: string; service: ShowcaseService }>(
-      async ({ input }) => input.service.generateTitle(input.cityName, input.prompt || undefined),
+      async ({ input }) =>
+        generateShowcaseTitle(input.service, input.cityName, input.prompt || undefined),
     ),
     /** 이미지 생성 비동기 액터 */
     generateImage: fromPromise<
       string,
       { cityName: string; title: string; prompt: string; service: ShowcaseService }
-    >(async ({ input }) => input.service.generateImage(input.cityName, input.title, input.prompt || undefined)),
+    >(async ({ input }) =>
+      generateShowcaseImage(
+        input.service,
+        input.cityName,
+        input.title,
+        input.prompt || undefined,
+      ),
+    ),
     /** 호텔 목록 생성 비동기 액터 */
     generateHotels: fromPromise<
       ShowcaseHotelCard[],
       { cityName: string; service: ShowcaseService }
-    >(async ({ input }) => input.service.generateHotels(input.cityName)),
+    >(async ({ input }) => generateShowcaseHotels(input.service, input.cityName)),
     /** 쇼케이스 저장 비동기 액터 */
     saveShowcase: fromPromise<
       unknown,
