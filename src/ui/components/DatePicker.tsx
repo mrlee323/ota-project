@@ -18,12 +18,21 @@ interface DatePickerProps {
   error?: string;
   /** 플레이스홀더 */
   placeholder?: string;
+  /** 이 날짜보다 이전 선택을 막는다 (YYYY-MM-DD) */
+  minDate?: string;
 }
 
 // ─── 컴포넌트 ───────────────────────────────────────────────────────────────
 
 /** 단일 날짜 선택기 — react-day-picker 기반 */
-export function DatePicker({ value, onChange, label, error, placeholder = "날짜를 선택하세요" }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onChange,
+  label,
+  error,
+  placeholder = "날짜를 선택하세요",
+  minDate,
+}: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const selected = useMemo(() => {
@@ -35,6 +44,11 @@ export function DatePicker({ value, onChange, label, error, placeholder = "날�
     onChange(format(day, "yyyy-MM-dd"));
     setIsOpen(false);
   };
+
+  const minDateValue = useMemo(() => {
+    if (!minDate) return undefined;
+    return new Date(minDate + "T00:00:00");
+  }, [minDate]);
 
   return (
     <div className="relative w-full space-y-1.5">
@@ -62,6 +76,7 @@ export function DatePicker({ value, onChange, label, error, placeholder = "날�
             selected={selected}
             onSelect={() => {}}
             onDayClick={handleDayClick}
+            disabled={minDateValue ? { before: minDateValue } : undefined}
             locale={ko}
             showOutsideDays={false}
             classNames={{

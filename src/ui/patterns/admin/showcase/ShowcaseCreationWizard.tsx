@@ -198,10 +198,10 @@ export function ShowcaseCreationWizard() {
             <span className="text-xl text-green-600">✓</span>
           </div>
           <h3 className="text-lg font-semibold text-gray-900">
-            쇼케이스가 생성되었습니다!
+            쇼케이스 초안이 저장되었습니다!
           </h3>
           <p className="text-sm text-gray-500">
-            &quot;{title}&quot; 쇼케이스가 성공적으로 저장되었습니다.
+            &quot;{title}&quot; 쇼케이스를 나중에 다시 수정할 수 있습니다.
           </p>
           <Link
             href="/admin/content/showcase"
@@ -305,7 +305,7 @@ export function ShowcaseCreationWizard() {
       {/* 헤더 */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
-          새 쇼케이스 생성
+          새 쇼케이스 초안 생성
         </h1>
         {!state.matches("done") && (
           <Link

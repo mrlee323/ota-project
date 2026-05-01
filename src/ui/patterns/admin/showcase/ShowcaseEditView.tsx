@@ -12,10 +12,16 @@ import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
 import type { ShowcaseHotelCard } from "@/domain/hotel/showcaseTypes";
 import { showcaseHotelCardSchema } from "@/domain/hotel/showcaseTypes";
 import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
+import {
+  generateShowcaseHotels,
+  generateShowcaseImage,
+  generateShowcaseTitle,
+} from "@/infrastructure/admin/showcaseGeneration";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
 import { DatePicker } from "@/ui/components/DatePicker";
 import { Input } from "@/ui/components/Input";
+import { useToast } from "@/ui/components/Toast";
 
 // ─── 폼 스키마 ───────────────────────────────────────────────────────────────
 
@@ -39,6 +45,23 @@ const editFormSchema = z
 
 type EditFormValues = z.infer<typeof editFormSchema>;
 
+function normalizeHotelCard(hotel: EditFormValues["hotels"][number]): ShowcaseHotelCard {
+  const { id, name, location, imageUrl, stars, discountRate, originalPrice, discountPrice, isAppDiscount, taxIncluded, badges } = hotel;
+  return {
+    id,
+    name,
+    location,
+    imageUrl,
+    stars,
+    discountRate,
+    originalPrice,
+    discountPrice,
+    isAppDiscount,
+    taxIncluded,
+    badges: [...badges],
+  };
+}
+
 // ─── 폼 컴포넌트 (데이터가 있을 때만 마운트) ───────────────────────────────
 
 interface ShowcaseEditFormProps {
@@ -48,6 +71,7 @@ interface ShowcaseEditFormProps {
 
 function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
   const queryClient = useQueryClient();
+  const { pushToast } = useToast();
 
   // 호텔 추가 모드 상태
   const [isAddingHotels, setIsAddingHotels] = useState(false);
@@ -78,6 +102,7 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
   const { fields: hotelFields, remove: removeHotel, append: appendHotel } = useFieldArray({
     control,
     name: "hotels",
+    keyName: "fieldKey",
   });
 
   const updateMutation = useMutation({
@@ -85,21 +110,86 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
       showcaseService.updateShowcase(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["showcase"] });
+      pushToast({
+        title: "저장 완료",
+        description: "쇼케이스가 저장되었습니다.",
+        variant: "success",
+      });
+    },
+    onError: (error) => {
+      pushToast({
+        title: "저장 실패",
+        description:
+          error instanceof Error ? error.message : "저장 중 오류가 발생했습니다.",
+        variant: "error",
+      });
+    },
+  });
+
+  const generateTitleMutation = useMutation({
+    mutationFn: () => generateShowcaseTitle(showcaseService, showcase.cityName),
+    onSuccess: (title) => {
+      setValue("title", title, { shouldValidate: true });
+      pushToast({
+        title: "AI 타이틀 재생성 완료",
+        description: "타이틀을 새로 만들었습니다.",
+        variant: "success",
+      });
+    },
+    onError: (error) => {
+      pushToast({
+        title: "타이틀 생성 실패",
+        description:
+          error instanceof Error ? error.message : "타이틀 생성 중 오류가 발생했습니다.",
+        variant: "error",
+      });
     },
   });
 
   const generateImageMutation = useMutation({
     mutationFn: () =>
-      showcaseService.generateImage(showcase.cityName, watch("title") || showcase.title),
-    onSuccess: (url) => setValue("imageUrl", url, { shouldValidate: true }),
+      generateShowcaseImage(
+        showcaseService,
+        showcase.cityName,
+        watch("title") || showcase.title,
+      ),
+    onSuccess: (url) => {
+      setValue("imageUrl", url, { shouldValidate: true });
+      pushToast({
+        title: "AI 이미지 재생성 완료",
+        description: "대표 이미지를 새로 만들었습니다.",
+        variant: "success",
+      });
+    },
+    onError: (error) => {
+      pushToast({
+        title: "이미지 생성 실패",
+        description:
+          error instanceof Error ? error.message : "이미지 생성 중 오류가 발생했습니다.",
+        variant: "error",
+      });
+    },
   });
 
   const generateHotelsMutation = useMutation({
-    mutationFn: () => showcaseService.generateHotels(showcase.cityName),
+    mutationFn: () => generateShowcaseHotels(showcaseService, showcase.cityName, watch("title") || showcase.title),
     onSuccess: (hotels) => {
       setCandidateHotels(hotels);
       setSelectedCandidateIds(hotels.map((h) => h.id));
       setIsAddingHotels(true);
+      pushToast({
+        title: "AI 호텔 생성 완료",
+        description: "추가할 호텔 후보를 불러왔습니다.",
+        variant: "success",
+      });
+    },
+    onError: (error) => {
+      pushToast({
+        title: "호텔 생성 실패",
+        description:
+          error instanceof Error ? error.message : "호텔 생성 중 오류가 발생했습니다.",
+        variant: "error",
+      });
     },
   });
 
@@ -107,11 +197,16 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
     const toAdd = candidateHotels.filter((h) => selectedCandidateIds.includes(h.id));
     const existingIds = new Set(hotelFields.map((f) => f.id));
     toAdd.forEach((h) => {
-      if (!existingIds.has(h.id)) appendHotel(h);
+      if (!existingIds.has(h.id)) appendHotel({ ...h });
     });
     setIsAddingHotels(false);
     setCandidateHotels([]);
     setSelectedCandidateIds([]);
+    pushToast({
+      title: "호텔 추가 완료",
+      description: `${toAdd.length}개의 호텔을 추가했습니다.`,
+      variant: "success",
+    });
   };
 
   const toggleCandidate = (hotelId: string) => {
@@ -121,13 +216,14 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
   };
 
   const onSubmit = (values: EditFormValues) => {
+    if (updateMutation.isPending) return;
     updateMutation.mutate({
       title: values.title,
       imageUrl: values.imageUrl,
       serviceEnabled: values.serviceEnabled,
       startDate: new Date(`${values.startDate}T${values.startTime}:00`).toISOString(),
       endDate: new Date(`${values.endDate}T${values.endTime}:00`).toISOString(),
-      hotels: values.hotels,
+      hotels: values.hotels.map(normalizeHotelCard),
     });
   };
 
@@ -141,6 +237,20 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
             error={errors.title?.message}
             {...register("title")}
           />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => generateTitleMutation.mutate()}
+              disabled={generateTitleMutation.isPending}
+            >
+              {generateTitleMutation.isPending ? "생성 중..." : "AI 타이틀 재생성"}
+            </Button>
+          </div>
+          {generateTitleMutation.isError && (
+            <p className="text-xs text-red-500">타이틀 생성에 실패했습니다. 다시 시도해 주세요.</p>
+          )}
 
           {/* 이미지 URL + 미리보기 */}
           <div className="space-y-2">
@@ -240,7 +350,7 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
             {hotelFields.length > 0 ? (
               <div className="space-y-2">
                 {hotelFields.map((field, index) => (
-                  <div key={field.id} className="flex items-center gap-3 rounded-md border border-gray-200 bg-white p-3">
+                  <div key={field.fieldKey} className="flex items-center gap-3 rounded-md border border-gray-200 bg-white p-3">
                     <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-gray-100">
                       <img src={field.imageUrl} alt={field.name} className="h-full w-full object-cover" />
                     </div>

@@ -5,7 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
 import type { ShowcaseContent } from "@/domain/admin/showcaseContent";
-import { isShowcaseExpired, isShowcaseActive } from "@/domain/admin/showcaseContent";
+import {
+  getShowcaseLifecycleStatus,
+  isShowcaseExpired,
+  isShowcaseActive,
+  isShowcaseScheduled,
+} from "@/domain/admin/showcaseContent";
 import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
@@ -83,10 +88,15 @@ export function ShowcaseListView() {
   return (
     <div className="space-y-6">
       {/* 헤더 영역 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">쇼케이스 관리</h1>
+      <div className="flex items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-gray-900">쇼케이스 관리</h1>
+          <p className="text-sm text-gray-500">
+            쇼케이스는 언제든 수정할 수 있고, 노출 시점은 기간 설정으로 제어합니다.
+          </p>
+        </div>
         <Link href="/admin/content/showcase/new">
-          <Button variant="primary">새 쇼케이스 생성</Button>
+          <Button variant="primary">쇼케이스 생성</Button>
         </Link>
       </div>
 
@@ -96,63 +106,61 @@ export function ShowcaseListView() {
       {/* 노출 상태 요약 */}
       {showcaseList && showcaseList.length > 0 && (() => {
         const now = new Date();
-        const activeItems = showcaseList.filter((item) => isShowcaseActive(item, now));
-        const pendingItems = showcaseList.filter((item) =>
-          item.serviceEnabled &&
-          !isShowcaseExpired(item, now) &&
-          new Date(item.startDate) > now,
-        );
+        const activeItems = showcaseList
+          .filter((item) => isShowcaseActive(item, now))
+          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+        const upcomingItems = showcaseList
+          .filter((item) => isShowcaseScheduled(item, now))
+          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
-        return (activeItems.length > 0 || pendingItems.length > 0) ? (
+        if (activeItems.length === 0 && upcomingItems.length === 0) return null;
+
+        const summaryCard = (
+          title: string,
+          color: "green" | "yellow",
+          items: ShowcaseContent[],
+          emptyText: string,
+        ) => {
+          const accent = color === "green" ? "text-green-600 bg-green-50" : "text-yellow-600 bg-yellow-50";
+          return (
+            <Card>
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className={`text-xs font-medium ${color === "green" ? "text-green-600" : "text-yellow-600"}`}>
+                    {title} ({items.length})
+                  </p>
+                </div>
+                {items.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    {items.map((item) => (
+                      <Link key={`${title}-${item.id}`} href={`/admin/content/showcase/${item.id}/edit`}>
+                        <div className={`flex items-center justify-between rounded-md px-3 py-2 cursor-pointer transition-colors hover:opacity-90 ${accent}`}>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm font-medium text-gray-900">{item.cityName}</span>
+                            <span className="mx-1.5 text-gray-300">·</span>
+                            <span className="text-sm text-gray-600 truncate">{item.title}</span>
+                          </div>
+                          <span className="ml-3 shrink-0 text-xs text-gray-500">
+                            {format(new Date(item.startDate), "MM.dd")} ~ {format(new Date(item.endDate), "MM.dd")}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">{emptyText}</p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        };
+
+        return (
           <div className="grid grid-cols-1 gap-4">
-            {activeItems.length > 0 && (
-              <Card>
-                <CardContent className="py-3 px-4">
-                  <p className="text-xs font-medium text-green-600 mb-2">Active ({activeItems.length})</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {activeItems.map((item) => (
-                      <Link key={`active-${item.id}`} href={`/admin/content/showcase/${item.id}/edit`}>
-                        <div className="flex items-center justify-between rounded-md bg-green-50 px-3 py-2 cursor-pointer hover:bg-green-100 transition-colors">
-                          <div className="min-w-0 flex-1">
-                            <span className="text-sm font-medium text-gray-900">{item.cityName}</span>
-                            <span className="mx-1.5 text-gray-300">·</span>
-                            <span className="text-sm text-gray-600 truncate">{item.title}</span>
-                          </div>
-                          <span className="ml-3 shrink-0 text-xs text-gray-400">
-                            {format(new Date(item.startDate), "MM.dd")} ~ {format(new Date(item.endDate), "MM.dd")}
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            {pendingItems.length > 0 && (
-              <Card>
-                <CardContent className="py-3 px-4">
-                  <p className="text-xs font-medium text-yellow-600 mb-2">대기 중 ({pendingItems.length})</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {pendingItems.map((item) => (
-                      <Link key={`pending-${item.id}`} href={`/admin/content/showcase/${item.id}/edit`}>
-                        <div className="flex items-center justify-between rounded-md bg-yellow-50 px-3 py-2 cursor-pointer hover:bg-yellow-100 transition-colors">
-                          <div className="min-w-0 flex-1">
-                            <span className="text-sm font-medium text-gray-900">{item.cityName}</span>
-                            <span className="mx-1.5 text-gray-300">·</span>
-                            <span className="text-sm text-gray-600 truncate">{item.title}</span>
-                          </div>
-                          <span className="ml-3 shrink-0 text-xs text-gray-400">
-                            {format(new Date(item.startDate), "MM.dd")} ~ {format(new Date(item.endDate), "MM.dd")}
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {summaryCard("현재 오픈 중", "green", activeItems, "현재 오픈 중인 쇼케이스가 없습니다.")}
+            {summaryCard("다음 오픈 예정", "yellow", upcomingItems, "다음 오픈 예정 쇼케이스가 없습니다.")}
           </div>
-        ) : null;
+        );
       })()}
 
       {/* 컨텐츠 목록 테이블 */}
@@ -164,6 +172,7 @@ export function ShowcaseListView() {
                 <th className="px-6 py-3 font-medium">ID</th>
                 <th className="px-6 py-3 font-medium">도시명</th>
                 <th className="px-6 py-3 font-medium">타이틀</th>
+                <th className="px-6 py-3 font-medium">상태</th>
                 <th className="px-6 py-3 font-medium">서비스</th>
                 <th className="px-6 py-3 font-medium">노출 기간</th>
                 <th className="px-6 py-3 font-medium">생성일</th>
@@ -181,6 +190,28 @@ export function ShowcaseListView() {
                   </td>
                   <td className="px-6 py-4 text-gray-900">{item.cityName}</td>
                   <td className="px-6 py-4 text-gray-900">{item.title}</td>
+                  <td className="px-6 py-4">
+                    {(() => {
+                      const status = getShowcaseLifecycleStatus(item);
+                      const labelMap: Record<typeof status, string> = {
+                        active: "오픈 중",
+                        scheduled: "예약됨",
+                        expired: "만료",
+                        inactive: "비활성",
+                      };
+                      const classMap: Record<typeof status, string> = {
+                        active: "bg-green-100 text-green-700",
+                        scheduled: "bg-yellow-100 text-yellow-700",
+                        expired: "bg-red-100 text-red-700",
+                        inactive: "bg-gray-100 text-gray-600",
+                      };
+                      return (
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${classMap[status]}`}>
+                          {labelMap[status]}
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td className="px-6 py-4">
                     <button
                       type="button"

@@ -194,9 +194,9 @@ function AutoConfigEditForm({ config, onSave, onCancel, isSaving }: AutoConfigEd
         />
       </div>
 
-      {/* 다음 생성 대상 도시 */}
+      {/* 자동 생성 대상 도시 */}
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-gray-700">다음 생성 대상 도시</label>
+        <label className="text-sm font-medium text-gray-700">자동 생성 대상 도시</label>
         <div className="flex flex-wrap gap-1.5 min-h-[32px] rounded-md border border-gray-300 bg-white p-2">
           {fields.map((field, index) => (
             <span
@@ -248,7 +248,7 @@ function AutoConfigEditForm({ config, onSave, onCancel, isSaving }: AutoConfigEd
           />
         )}
       />
-      <p className="text-xs text-gray-400 -mt-2">오전 8시에 자동 생성됩니다</p>
+      <p className="text-xs text-gray-400 -mt-2">지정한 주기에 맞춰 다음 쇼케이스가 미리 생성됩니다</p>
 
       {/* 컨텐츠 노출 기간 */}
       <div className="space-y-3">
