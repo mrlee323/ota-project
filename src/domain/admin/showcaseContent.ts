@@ -44,6 +44,8 @@ const showcaseCreationDraftBaseSchema = z.object({
   imageUrl: z.string().url(),
   /** 호텔 카드 목록 */
   hotels: z.array(showcaseHotelCardSchema),
+  /** 서비스 활성화 여부 (생성 시 기본 true) */
+  serviceEnabled: z.boolean().optional(),
   /** 노출 시작일 (ISO 8601) */
   startDate: z.string().datetime(),
   /** 노출 종료일 (ISO 8601) */
@@ -77,4 +79,24 @@ export function isShowcaseExpired(
   now: Date = new Date(),
 ): boolean {
   return new Date(content.endDate) < now;
+}
+
+/** 아직 노출 시작 전인지 판단 */
+export function isShowcaseScheduled(
+  content: ShowcaseContent,
+  now: Date = new Date(),
+): boolean {
+  return content.serviceEnabled && new Date(content.startDate) > now;
+}
+
+/** 쇼케이스 생명주기 상태를 간단히 분류한다. */
+export function getShowcaseLifecycleStatus(
+  content: ShowcaseContent,
+  now: Date = new Date(),
+): "active" | "scheduled" | "expired" | "inactive" {
+  if (!content.serviceEnabled) return "inactive";
+  if (isShowcaseActive(content, now)) return "active";
+  if (isShowcaseScheduled(content, now)) return "scheduled";
+  if (isShowcaseExpired(content, now)) return "expired";
+  return "inactive";
 }
