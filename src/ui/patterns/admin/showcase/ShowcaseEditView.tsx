@@ -14,9 +14,9 @@ import { showcaseHotelCardSchema } from "@/domain/hotel/showcaseTypes";
 import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
 import {
   generateShowcaseHotels,
-  generateShowcaseImage,
   generateShowcaseTitle,
 } from "@/infrastructure/admin/showcaseGeneration";
+import { useImageUpload } from "@/application/useImageUpload";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
 import { DatePicker } from "@/ui/components/DatePicker";
@@ -72,6 +72,7 @@ interface ShowcaseEditFormProps {
 function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
+  const { uploadFile, generateImage: generateImageUpload, isUploading: isImageUploading } = useImageUpload();
 
   // 호텔 추가 모드 상태
   const [isAddingHotels, setIsAddingHotels] = useState(false);
@@ -146,30 +147,32 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
     },
   });
 
-  const generateImageMutation = useMutation({
-    mutationFn: () =>
-      generateShowcaseImage(
-        showcaseService,
-        showcase.cityName,
-        watch("title") || showcase.title,
-      ),
-    onSuccess: (url) => {
+  const handleGenerateImage = async () => {
+    try {
+      const url = await generateImageUpload({
+        cityName: showcase.cityName,
+        title: watch("title") || showcase.title,
+        folder: "showcase",
+      });
       setValue("imageUrl", url, { shouldValidate: true });
-      pushToast({
-        title: "AI 이미지 재생성 완료",
-        description: "대표 이미지를 새로 만들었습니다.",
-        variant: "success",
-      });
-    },
-    onError: (error) => {
-      pushToast({
-        title: "이미지 생성 실패",
-        description:
-          error instanceof Error ? error.message : "이미지 생성 중 오류가 발생했습니다.",
-        variant: "error",
-      });
-    },
-  });
+      pushToast({ title: "AI 이미지 재생성 완료", description: "대표 이미지를 새로 만들었습니다.", variant: "success" });
+    } catch {
+      pushToast({ title: "이미지 생성 실패", description: "이미지 생성 중 오류가 발생했습니다.", variant: "error" });
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadFile(file, { folder: "showcase" });
+      setValue("imageUrl", url, { shouldValidate: true });
+      pushToast({ title: "이미지 업로드 완료", description: "이미지가 업로드됐습니다.", variant: "success" });
+    } catch {
+      pushToast({ title: "업로드 실패", description: "이미지 업로드 중 오류가 발생했습니다.", variant: "error" });
+    }
+    e.target.value = "";
+  };
 
   const generateHotelsMutation = useMutation({
     mutationFn: () => generateShowcaseHotels(showcaseService, showcase.cityName, watch("title") || showcase.title),
@@ -272,26 +275,32 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-gray-400">이미지 없음</div>
               )}
-              {generateImageMutation.isPending && (
+              {isImageUploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                  <span className="text-sm font-medium text-white">이미지 생성 중...</span>
+                  <span className="text-sm font-medium text-white">처리 중...</span>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => generateImageMutation.mutate()}
-                disabled={generateImageMutation.isPending}
-                className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-md bg-black/60 px-3 py-1.5 text-xs font-medium text-white hover:bg-black/80 disabled:opacity-50"
-              >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                AI 이미지 재생성
-              </button>
+              <div className="absolute bottom-2 right-2 flex gap-1.5">
+                <label className="flex cursor-pointer items-center gap-1.5 rounded-md bg-black/60 px-3 py-1.5 text-xs font-medium text-white hover:bg-black/80">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  업로드
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleFileUpload} disabled={isImageUploading} />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGenerateImage}
+                  disabled={isImageUploading}
+                  className="flex items-center gap-1.5 rounded-md bg-black/60 px-3 py-1.5 text-xs font-medium text-white hover:bg-black/80 disabled:opacity-50"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  AI 재생성
+                </button>
+              </div>
             </div>
-            {generateImageMutation.isError && (
-              <p className="text-xs text-red-500">이미지 생성에 실패했습니다. 다시 시도해 주세요.</p>
-            )}
           </div>
 
           {/* 노출 기간 */}

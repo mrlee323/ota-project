@@ -53,6 +53,7 @@ export type ShowcaseCreationEvent =
   | { type: "SUBMIT_PROMPT"; prompt: string }
   | { type: "CONFIRM" }
   | { type: "UPDATE_TITLE"; title: string }
+  | { type: "UPDATE_IMAGE"; imageUrl: string }
   | { type: "REGENERATE_IMAGE" }
   | { type: "TOGGLE_HOTEL"; hotelId: string }
   | { type: "SELECT_ALL_HOTELS" }
@@ -114,6 +115,10 @@ export const showcaseCreationMachine = setup({
     isFailedAtHotels: ({ context }) => context.failedState === "generatingHotels",
     /** RETRY 시 failedState가 saving인지 확인 */
     isFailedAtSaving: ({ context }) => context.failedState === "saving",
+    /** 타이틀가 이미 생성돼 있고 프롬프트가 바뀌지 않은 경우 재생성 스킵 */
+    hasTitleAlready: ({ context, event }) =>
+      context.title !== "" &&
+      (event as { prompt?: string }).prompt === context.prompt,
   },
 }).createMachine({
   id: "showcaseCreation",
@@ -188,12 +193,22 @@ export const showcaseCreationMachine = setup({
     settingPrompt: {
       on: {
         BACK: { target: "settingPeriod" },
-        SUBMIT_PROMPT: {
-          target: "generatingTitle",
-          actions: assign({
-            prompt: ({ event }) => event.prompt,
-          }),
-        },
+        SUBMIT_PROMPT: [
+          {
+            /** 타이틀이 이미 있고 프롬프트가 동일하면 생성 스킵 */
+            guard: "hasTitleAlready",
+            target: "editingTitle",
+            actions: assign({
+              prompt: ({ event }) => event.prompt,
+            }),
+          },
+          {
+            target: "generatingTitle",
+            actions: assign({
+              prompt: ({ event }) => event.prompt,
+            }),
+          },
+        ],
       },
     },
 
@@ -263,12 +278,17 @@ export const showcaseCreationMachine = setup({
       },
     },
 
-    /** 이미지 확인 단계 - 재생성 가능 */
+    /** 이미지 확인 단계 - 재생성 또는 직접 업로드 가능 */
     reviewingImage: {
       on: {
         BACK: { target: "editingTitle" },
         CONFIRM: { target: "generatingHotels" },
         REGENERATE_IMAGE: { target: "generatingImage" },
+        UPDATE_IMAGE: {
+          actions: assign({
+            imageUrl: ({ event }) => event.imageUrl,
+          }),
+        },
       },
     },
 

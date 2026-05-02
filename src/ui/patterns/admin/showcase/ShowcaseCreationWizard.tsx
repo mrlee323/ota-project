@@ -275,6 +275,7 @@ export function ShowcaseCreationWizard() {
           title={title}
           onConfirm={() => send({ type: "CONFIRM" })}
           onRegenerate={() => send({ type: "REGENERATE_IMAGE" })}
+          onUploadImage={(url) => send({ type: "UPDATE_IMAGE", imageUrl: url })}
           onBack={() => send({ type: "BACK" })}
         />
       );
