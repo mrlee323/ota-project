@@ -39,7 +39,13 @@ export async function POST(request: Request) {
     const fluxPrompt = buildFluxPrompt(cityName, title, prompt);
     const blob = await generateImageWithFlux(fluxPrompt);
 
-    const path = `${folder}/${cityName}/${Date.now()}.jpg`;
+    // Supabase Storage는 비ASCII 문자를 허용하지 않으므로 slug로 변환
+    const safeCity = cityName
+      .normalize("NFD")
+      .replace(/[^\x00-\x7F]/g, "")
+      .replace(/\s+/g, "-")
+      .toLowerCase() || `city-${Date.now()}`;
+    const path = `${folder}/${safeCity}/${Date.now()}.jpg`;
     const url = await uploadImage(path, blob);
 
     return NextResponse.json({ url });

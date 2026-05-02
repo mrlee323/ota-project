@@ -1,7 +1,7 @@
 import "server-only";
 
 const HF_MODEL_URL =
-  "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
+  "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell";
 
 /**
  * Hugging Face FLUX.1-schnell 모델로 이미지를 생성한다.
@@ -36,14 +36,17 @@ export function buildFluxPrompt(
   title?: string,
   prompt?: string,
 ): string {
+  const mood = prompt
+    ? `Focus on the mood of "${prompt}".`
+    : "Focus on a luxurious and iconic city view.";
+
   const parts = [
-    `${cityName} luxury hotel`,
-    "travel photography",
-    "cinematic",
-    "high quality",
-    "8k",
+    `A high-end editorial travel photography of ${cityName}.`,
+    mood,
+    "Cinematic lighting, 8k resolution, architectural symmetry, elegant hotel atmosphere, highly detailed textures, shot on 35mm lens.",
   ];
-  if (title) parts.push(title);
-  if (prompt) parts.push(prompt);
-  return parts.join(", ");
+
+  if (title) parts.push(`Theme: ${title}.`);
+
+  return parts.join(" ");
 }
