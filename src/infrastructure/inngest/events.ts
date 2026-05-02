@@ -19,6 +19,20 @@ export type Events = {
     };
   };
 
+  /** 단일 도시 쇼케이스 재생성 요청 (어드민 수동) */
+  "admin/showcase.regenerate-city": {
+    data: {
+      /** 재생성 대상 도시명 */
+      cityName: string;
+      /** 콘텐츠 노출 시작일 (YYYY-MM-DD) */
+      startDate: string;
+      /** 콘텐츠 노출 종료일 (YYYY-MM-DD) */
+      endDate: string;
+      /** AI 생성 힌트 프롬프트 (선택) */
+      prompt?: string;
+    };
+  };
+
   /** 쇼케이스 배치 생성 완료 알림 */
   "admin/showcase.batch-completed": {
     data: {

@@ -43,8 +43,6 @@ interface CityDraftState {
   contentVisible: boolean;
 }
 
-const DEFAULT_IMAGE_URL =
-  "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1200&q=80";
 function generateLocalId(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -157,8 +155,6 @@ function getScopeKey(city: CityDraftState): string {
   return buildShowcaseCreationKey({
     cityName: city.cityName,
     prompt: city.prompt || undefined,
-    startDate: city.startDate,
-    endDate: city.endDate,
   });
 }
 
@@ -702,6 +698,71 @@ function CityCard({
   onClone,
   onRemove,
 }: CityCardProps) {
+  const [imageCandidates, setImageCandidates] = useState<string[]>([]);
+  const [isGeneratingCandidates, setIsGeneratingCandidates] = useState(false);
+  const [isInngestRunning, setIsInngestRunning] = useState(false);
+  const { pushToast } = useToast();
+
+  const handleGenerateCandidates = async () => {
+    setIsGeneratingCandidates(true);
+    setImageCandidates([]);
+    try {
+      const res = await fetch("/api/upload/image/generate-candidates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cityName: city.cityName,
+          title: city.title || undefined,
+          prompt: city.prompt || undefined,
+          count: 2,
+        }),
+      });
+      const data = (await res.json()) as { candidates?: string[]; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "후보 생성 실패");
+      setImageCandidates(data.candidates ?? []);
+    } catch (err) {
+      console.error("[CityCard] handleGenerateCandidates:", err);
+    } finally {
+      setIsGeneratingCandidates(false);
+    }
+  };
+
+  const handlePickCandidate = (url: string) => {
+    onContentChange(city.id, { imageUrl: url });
+    setImageCandidates([]);
+  };
+
+  const handleInngestRegenerate = async () => {
+    setIsInngestRunning(true);
+    try {
+      const res = await fetch("/api/admin/showcase/regenerate-city", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cityName: city.cityName,
+          startDate: city.startDate,
+          endDate: city.endDate,
+          prompt: city.prompt || undefined,
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Inngest 트리거 실패");
+      pushToast({
+        title: "Inngest 백그라운드 작업 시작",
+        description: `${city.cityName} 쇼케이스 재생성이 백그라운드에서 실행됩니다.`,
+        variant: "success",
+      });
+    } catch (err) {
+      pushToast({
+        title: "Inngest 트리거 실패",
+        description: err instanceof Error ? err.message : "알 수 없는 오류",
+        variant: "error",
+      });
+    } finally {
+      setIsInngestRunning(false);
+    }
+  };
+
   const stale =
     hasGeneratedContent(city) &&
     (!isSectionGenerated(city, city.titleGenerationKey) ||
@@ -781,6 +842,30 @@ function CityCard({
                 <label className="text-sm font-medium text-gray-700">
                   프롬프트
                 </label>
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                  {[
+                    { label: "럭셔리", value: "럭셔리, 고급스러운 분위기, 프리미엄 서비스" },
+                    { label: "미니멀", value: "미니멀, 깔끔하고 모던한 감성" },
+                    { label: "빈티지", value: "빈티지, 레트로 감성, 클래식한 분위기" },
+                    { label: "현대적인", value: "현대적인, 세련된 도심 호텔" },
+                    { label: "로맨틱", value: "로맨틱, 커플 여행, 감성적인 분위기" },
+                    { label: "비즈니스", value: "비즈니스 출장객, 효율적이고 편리한 위치" },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => onScopeChange(city.id, { prompt: preset.value })}
+                      className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors disabled:opacity-40 ${
+                        city.prompt === preset.value
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-200 text-gray-500 hover:border-gray-400"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   value={city.prompt}
                   placeholder="예: 가을 감성, 커플 여행, 고급 호텔 중심"
@@ -788,7 +873,7 @@ function CityCard({
                     onScopeChange(city.id, { prompt: event.target.value })
                   }
                   disabled={busy}
-                  className="min-h-[110px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
 
@@ -824,6 +909,16 @@ function CityCard({
                 >
                   컨텐츠 생성
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy || isInngestRunning || !city.cityName.trim()}
+                  onClick={handleInngestRegenerate}
+                  title="Inngest 백그라운드 작업으로 콘텐츠를 재생성하고 DB에 저장합니다"
+                >
+                  {isInngestRunning ? "Inngest 실행 중..." : "Inngest 재생성"}
+                </Button>
               </div>
             </div>
           </div>
@@ -832,10 +927,10 @@ function CityCard({
             {showGeneratedContent ? (
               <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                  <div className="space-y-4">
+                  <div className="min-w-0 space-y-4">
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                       <div className="flex items-center justify-between gap-2">
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                             타이틀
                           </p>
@@ -847,6 +942,7 @@ function CityCard({
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="shrink-0"
                           disabled={busy || !city.cityName.trim()}
                           onClick={() => onGenerate(city.id, "title")}
                         >
@@ -868,20 +964,31 @@ function CityCard({
 
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                       <div className="flex items-center justify-between gap-2">
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                             대표 이미지
                           </p>
                         </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={busy || !city.cityName.trim()}
-                          onClick={() => onGenerate(city.id, "image")}
-                        >
-                          AI 이미지 재생성
-                        </Button>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={busy || isGeneratingCandidates || !city.cityName.trim()}
+                            onClick={handleGenerateCandidates}
+                          >
+                            {isGeneratingCandidates ? "생성 중..." : "후보 이미지 생성"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={busy || !city.cityName.trim()}
+                            onClick={() => onGenerate(city.id, "image")}
+                          >
+                            AI 이미지 재생성
+                          </Button>
+                        </div>
                       </div>
                       <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white">
                         <div className="relative aspect-[16/9]">
@@ -911,6 +1018,13 @@ function CityCard({
                               </span>
                             </div>
                           )}
+                          {isGeneratingCandidates && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+                              <span className="text-sm font-medium text-white">
+                                후보 이미지 생성 중...
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <div className="border-t border-gray-200 p-3">
                           <Input
@@ -926,10 +1040,38 @@ function CityCard({
                           />
                         </div>
                       </div>
+                      {imageCandidates.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs text-gray-400">
+                            후보 이미지를 선택하면 대표 이미지로 적용됩니다.
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {imageCandidates.map((url, i) => (
+                              <button
+                                key={url}
+                                type="button"
+                                className="group relative overflow-hidden rounded-lg border-2 border-transparent hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onClick={() => handlePickCandidate(url)}
+                              >
+                                <img
+                                  src={url}
+                                  alt={`후보 ${i + 1}`}
+                                  className="aspect-[16/9] w-full object-cover"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                                  <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                    선택
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="min-w-0 space-y-4">
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
@@ -1100,11 +1242,6 @@ function ShowcaseCreationViewContent() {
                 new Date(`${currentStart ?? city.startDate}T00:00:00`)
             ? currentStart ?? city.startDate
             : patch.endDate ?? city.endDate,
-      status: "draft",
-      contentVisible: false,
-      titleGenerationKey: undefined,
-      imageGenerationKey: undefined,
-      hotelsGenerationKey: undefined,
       errorMessage: undefined,
     }));
   };
@@ -1383,7 +1520,7 @@ function ShowcaseCreationViewContent() {
         const payload = {
           cityName: city.cityName.trim(),
           title: city.title.trim(),
-          imageUrl: city.imageUrl.trim() || DEFAULT_IMAGE_URL,
+          imageUrl: city.imageUrl.trim(),
           hotels: city.hotels,
           serviceEnabled: true,
           startDate: toIsoStart(city.startDate),
