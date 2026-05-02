@@ -59,38 +59,29 @@ export const showcaseService: ShowcaseService = {
   },
 
   async generateTitle(cityName: string, prompt?: string): Promise<string> {
-    return apiFetch<{ title: string }>("/api/upload/title/generate", {
+    const data = await apiFetch<{ title: string }>("/api/upload/title/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cityName, prompt }),
-    }).then((d) => d.title).catch(() => prompt ? `${cityName} — ${prompt}` : `${cityName} 인기 호텔 모음`);
+    });
+    return data.title;
   },
 
   async generateImage(cityName: string, title?: string, prompt?: string): Promise<string> {
-    return apiFetch<{ url: string }>("/api/upload/image/generate", {
+    const data = await apiFetch<{ url: string }>("/api/upload/image/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cityName, title, prompt, folder: "showcase" }),
-    }).then((d) => d.url);
+    });
+    return data.url;
   },
 
   async generateHotels(cityName: string, title?: string, prompt?: string): Promise<ShowcaseHotelCard[]> {
-    const seed = [cityName, title, prompt].filter(Boolean).join(" ");
-    return [
-      {
-        id: `${cityName}-gen-001`,
-        name: seed ? `${seed} 대표 호텔` : `${cityName} 대표 호텔`,
-        location: cityName,
-        imageUrl:
-          "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=480&q=80",
-        stars: 5,
-        discountRate: 20,
-        originalPrice: 300000,
-        discountPrice: 240000,
-        isAppDiscount: true,
-        taxIncluded: true,
-        badges: ["플러스딜"],
-      },
-    ];
+    const data = await apiFetch<{ hotels: ShowcaseHotelCard[] }>("/api/admin/showcase/hotels/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cityName, title, prompt }),
+    });
+    return data.hotels;
   },
 };
