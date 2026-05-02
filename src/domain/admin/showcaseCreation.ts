@@ -39,17 +39,13 @@ export const showcaseCreationDraftSchema = z.object({
 });
 export type ShowcaseCreationDraft = z.infer<typeof showcaseCreationDraftSchema>;
 
-/** 현재 카드의 생성 스코프 키를 만든다. */
+/** 현재 카드의 생성 스코프 키를 만든다. (도시명 + 프롬프트만 포함, 노출기간은 생성 결과와 무관) */
 export function buildShowcaseCreationKey(input: {
   cityName: string;
   prompt?: string;
-  startDate: string;
-  endDate: string;
 }): string {
   return [
     input.cityName.trim(),
     input.prompt?.trim() ?? "",
-    input.startDate,
-    input.endDate,
   ].join("::");
 }
