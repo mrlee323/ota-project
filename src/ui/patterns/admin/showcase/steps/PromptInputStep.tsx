@@ -11,12 +11,13 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const PROMPT_EXAMPLES = [
-  "벚꽃 시즌 감성 숙소",
-  "비즈니스 출장객 위주",
-  "가족 여행 친화적",
-  "럭셔리 풀빌라",
-  "가성비 숙소 모음",
+const PROMPT_PRESETS = [
+  { label: "럭셔리", value: "럭셔리, 고급스러운 분위기, 프리미엄 서비스" },
+  { label: "미니멀", value: "미니멀, 깔끔하고 모던한 감성" },
+  { label: "빈티지", value: "빈티지, 레트로 감성, 클래식한 분위기" },
+  { label: "현대적인", value: "현대적인, 세련된 도심 호텔" },
+  { label: "로맨틱", value: "로맨틱, 커플 여행, 감성적인 분위기" },
+  { label: "비즈니스", value: "비즈니스 출장객, 효율적이고 편리한 위치" },
 ];
 
 interface PromptInputStepProps {
@@ -60,22 +61,22 @@ export function PromptInputStep({ cityName, onSubmit, onBack }: PromptInputStepP
           />
         </div>
 
-        {/* 예시 태그 */}
+        {/* 프리셋 */}
         <div className="space-y-1.5">
-          <p className="text-xs text-gray-400">빠른 선택</p>
+          <p className="text-xs text-gray-400">분위기 프리셋</p>
           <div className="flex flex-wrap gap-2">
-            {PROMPT_EXAMPLES.map((example) => (
+            {PROMPT_PRESETS.map((preset) => (
               <button
-                key={example}
+                key={preset.label}
                 type="button"
-                onClick={() => setValue("prompt", example)}
+                onClick={() => setValue("prompt", preset.value)}
                 className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                  currentPrompt === example
+                  currentPrompt === preset.value
                     ? "border-blue-500 bg-blue-50 text-blue-700"
                     : "border-gray-200 text-gray-600 hover:border-gray-400"
                 }`}
               >
-                {example}
+                {preset.label}
               </button>
             ))}
           </div>
