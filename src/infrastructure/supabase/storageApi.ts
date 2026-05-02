@@ -1,3 +1,4 @@
+import "server-only";
 import { createServiceClient } from "./serviceClient";
 
 const BUCKET = "showcase-images";

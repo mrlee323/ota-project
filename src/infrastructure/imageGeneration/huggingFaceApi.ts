@@ -1,3 +1,5 @@
+import "server-only";
+
 const HF_MODEL_URL =
   "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
 

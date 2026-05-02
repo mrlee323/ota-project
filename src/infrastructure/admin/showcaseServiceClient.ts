@@ -58,24 +58,20 @@ export const showcaseService: ShowcaseService = {
     });
   },
 
-  // Phase 4에서 n8n으로 교체 예정
   async generateTitle(cityName: string, prompt?: string): Promise<string> {
-    if (prompt) return `${cityName} — ${prompt}`;
-    return `${cityName} 인기 호텔 모음`;
+    return apiFetch<{ title: string }>("/api/upload/title/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cityName, prompt }),
+    }).then((d) => d.title).catch(() => prompt ? `${cityName} — ${prompt}` : `${cityName} 인기 호텔 모음`);
   },
 
-  async generateImage(cityName: string, _title: string, _prompt?: string): Promise<string> {
-    const imageMap: Record<string, string> = {
-      교토: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&q=80",
-      제주: "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?w=1200&q=80",
-      부산: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=1200&q=80",
-      나트랑: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=1200&q=80",
-      파리: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1200&q=80",
-    };
-    return (
-      imageMap[cityName] ??
-      "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1200&q=80"
-    );
+  async generateImage(cityName: string, title?: string, prompt?: string): Promise<string> {
+    return apiFetch<{ url: string }>("/api/upload/image/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cityName, title, prompt, folder: "showcase" }),
+    }).then((d) => d.url);
   },
 
   async generateHotels(cityName: string, title?: string, prompt?: string): Promise<ShowcaseHotelCard[]> {

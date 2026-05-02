@@ -48,7 +48,7 @@ export const autoGenerateShowcase = inngest.createFunction(
           try {
             const [title, imageUrl, hotels] = await Promise.all([
               generateTitle(city, prompt),
-              generateImage(city),
+              generateImage(city, prompt),
               resolveHotelsForCity(city),
             ]);
 
