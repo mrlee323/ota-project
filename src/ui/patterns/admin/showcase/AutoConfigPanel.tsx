@@ -314,10 +314,16 @@ function AutoConfigEditForm({ config, onSave, onCancel, isSaving }: AutoConfigEd
 
 // ─── AutoConfigPanel 컴포넌트 ───────────────────────────────────────────────
 
+interface GenerateResult {
+  ok: boolean;
+  eventIds: string[];
+}
+
 export function AutoConfigPanel() {
   const queryClient = useQueryClient();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [generateStatus, setGenerateStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const { data: config, isLoading, isError } = useQuery<AutoConfig>({
     queryKey: ["autoConfig"],
@@ -344,6 +350,29 @@ export function AutoConfigPanel() {
 
   const handleSave = (input: UpdateAutoConfigInput) => {
     updateMutation.mutate(input, { onSuccess: () => setIsEditing(false) });
+  };
+
+  const handleGenerateNow = async () => {
+    if (!config || config.suggestedCities.length === 0) return;
+    setGenerateStatus("loading");
+    try {
+      const res = await fetch("/api/admin/showcase/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cities: config.suggestedCities,
+          startDate: config.contentStartDate,
+          endDate: config.contentEndDate,
+        }),
+      });
+      const data = (await res.json()) as GenerateResult;
+      if (!res.ok || !data.ok) throw new Error("생성 요청 실패");
+      setGenerateStatus("success");
+      setTimeout(() => setGenerateStatus("idle"), 4000);
+    } catch {
+      setGenerateStatus("error");
+      setTimeout(() => setGenerateStatus("idle"), 4000);
+    }
   };
 
   if (isLoading) {
@@ -442,8 +471,26 @@ export function AutoConfigPanel() {
                     </div>
                   </div>
                 )}
-                <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>수정</Button>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs">
+                    {generateStatus === "success" && (
+                      <span className="text-green-600 font-medium">생성 요청이 전송됐습니다</span>
+                    )}
+                    {generateStatus === "error" && (
+                      <span className="text-red-500">생성 요청에 실패했습니다</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateNow}
+                      disabled={generateStatus === "loading" || config.suggestedCities.length === 0}
+                    >
+                      {generateStatus === "loading" ? "요청 중..." : "지금 생성"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>수정</Button>
+                  </div>
                 </div>
               </div>
             )}
