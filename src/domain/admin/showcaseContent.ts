@@ -13,6 +13,8 @@ const showcaseContentBaseSchema = z.object({
   title: z.string().min(1),
   /** 대표 이미지 URL */
   imageUrl: z.string().url(),
+  /** AI 생성 시 사용한 분위기/테마 프롬프트 */
+  prompt: z.string().optional(),
   /** 호텔 카드 목록 */
   hotels: z.array(showcaseHotelCardSchema),
   /** 서비스 활성화 여부 */
@@ -42,6 +44,8 @@ const showcaseCreationDraftBaseSchema = z.object({
   title: z.string().min(1),
   /** 대표 이미지 URL */
   imageUrl: z.string().url(),
+  /** AI 생성 시 사용한 분위기/테마 프롬프트 */
+  prompt: z.string().optional(),
   /** 호텔 카드 목록 */
   hotels: z.array(showcaseHotelCardSchema),
   /** 서비스 활성화 여부 (생성 시 기본 true) */

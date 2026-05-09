@@ -16,6 +16,7 @@ function rowToContent(row: Record<string, unknown>): ShowcaseContent {
     cityName: row.city_name,
     title: row.title,
     imageUrl: row.image_url,
+    prompt: row.prompt ?? undefined,
     hotels: row.hotels,
     serviceEnabled: row.service_enabled,
     startDate: toUtcIso(row.start_date),
@@ -79,6 +80,7 @@ export async function createShowcaseContent(
       city_name: draft.cityName,
       title: draft.title,
       image_url: draft.imageUrl,
+      prompt: draft.prompt ?? null,
       hotels: draft.hotels,
       service_enabled: draft.serviceEnabled ?? true,
       start_date: draft.startDate,
@@ -102,6 +104,7 @@ export async function updateShowcaseContent(
   if (input.cityName !== undefined) patch.city_name = input.cityName;
   if (input.title !== undefined) patch.title = input.title;
   if (input.imageUrl !== undefined) patch.image_url = input.imageUrl;
+  if (input.prompt !== undefined) patch.prompt = input.prompt || null;
   if (input.hotels !== undefined) patch.hotels = input.hotels;
   if (input.serviceEnabled !== undefined) patch.service_enabled = input.serviceEnabled;
   if (input.startDate !== undefined) patch.start_date = input.startDate;

@@ -13,6 +13,7 @@ const updateShowcaseSchema = z.object({
   cityName: z.string().min(1).optional(),
   title: z.string().min(1).optional(),
   imageUrl: z.string().url().optional(),
+  prompt: z.string().optional(),
   hotels: z.array(showcaseHotelCardSchema).optional(),
   serviceEnabled: z.boolean().optional(),
   startDate: z.string().datetime().optional(),
