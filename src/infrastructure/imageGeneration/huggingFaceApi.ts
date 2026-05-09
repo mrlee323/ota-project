@@ -36,17 +36,23 @@ export function buildFluxPrompt(
   title?: string,
   prompt?: string,
 ): string {
-  const mood = prompt
-    ? `Focus on the mood of "${prompt}".`
-    : "Focus on a luxurious and iconic city view.";
+  if (prompt) {
+    // 사용자 프롬프트가 있으면 해당 분위기를 최우선으로 반영
+    const parts = [
+      `A high-end editorial travel photography of ${cityName}.`,
+      `${prompt}.`,
+      "Cinematic lighting, 8k resolution, highly detailed textures, shot on 35mm lens.",
+    ];
+    if (title) parts.push(`Theme: ${title}.`);
+    return parts.join(" ");
+  }
 
+  // 프롬프트 없을 때 기본값: 호텔/도시 아이코닉 뷰
   const parts = [
     `A high-end editorial travel photography of ${cityName}.`,
-    mood,
-    "Cinematic lighting, 8k resolution, architectural symmetry, elegant hotel atmosphere, highly detailed textures, shot on 35mm lens.",
+    "Luxurious and iconic city view, elegant hotel atmosphere.",
+    "Cinematic lighting, 8k resolution, architectural symmetry, highly detailed textures, shot on 35mm lens.",
   ];
-
   if (title) parts.push(`Theme: ${title}.`);
-
   return parts.join(" ");
 }

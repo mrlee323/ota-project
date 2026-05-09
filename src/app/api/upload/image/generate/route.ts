@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-  generateImageWithFlux,
-  buildFluxPrompt,
-} from "@/infrastructure/imageGeneration/huggingFaceApi";
+import { buildFluxPromptWithGemini } from "@/infrastructure/admin/showcaseAiService";
+import { generateImageWithFlux } from "@/infrastructure/imageGeneration/huggingFaceApi";
 import { uploadImage } from "@/infrastructure/supabase/storageApi";
 
 interface GenerateImageBody {
@@ -36,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const fluxPrompt = buildFluxPrompt(cityName, title, prompt);
+    const fluxPrompt = await buildFluxPromptWithGemini(cityName, prompt ?? title);
     const blob = await generateImageWithFlux(fluxPrompt);
 
     // Supabase Storage는 비ASCII 문자를 허용하지 않으므로 slug로 변환

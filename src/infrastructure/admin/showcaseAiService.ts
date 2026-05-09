@@ -1,10 +1,7 @@
 import "server-only";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ShowcaseHotelCard } from "@/domain/hotel/showcaseTypes";
-import {
-  generateImageWithFlux,
-  buildFluxPrompt,
-} from "@/infrastructure/imageGeneration/huggingFaceApi";
+import { generateImageWithFlux } from "@/infrastructure/imageGeneration/huggingFaceApi";
 import { uploadImage } from "@/infrastructure/supabase/storageApi";
 
 function getGeminiModel() {
@@ -45,10 +42,47 @@ ${prompt
 }
 
 /**
+ * Gemini를 사용해 도시명 + 사용자 의도를 FLUX에 최적화된 영문 프롬프트로 변환한다.
+ * - 도시 랜드마크 지식 반영
+ * - 한국어 의도를 영문으로 해석
+ * - 사람/얼굴 없는 풍경 위주로 고정
+ */
+export async function buildFluxPromptWithGemini(
+  cityName: string,
+  userPrompt?: string,
+): Promise<string> {
+  const model = getGeminiModel();
+
+  const message = `
+당신은 이미지 생성 AI(FLUX)를 위한 영문 프롬프트 전문가입니다.
+
+도시: ${cityName}
+사용자 의도: ${userPrompt ?? "해당 도시의 가장 유명한 랜드마크와 대표 풍경"}
+
+위 정보를 바탕으로 FLUX 이미지 생성에 최적화된 영문 프롬프트를 작성하세요.
+
+규칙:
+- 반드시 영어로만 작성
+- 해당 도시의 실제 유명 랜드마크, 명소, 자연경관을 구체적으로 포함
+- "no people, no faces, no humans" 반드시 포함
+- 풍경/도시경관 중심 (landscape, cityscape, scenery)
+- cinematic lighting, 8k resolution, wide angle 등 품질 키워드 포함
+- 한 문단, 80단어 이내
+
+영문 프롬프트만 출력하세요.
+`.trim();
+
+  const result = await model.generateContent(message);
+  const text = result.response.text().trim().replace(/^["']|["']$/g, "");
+  if (!text) throw new Error("Gemini가 빈 프롬프트를 반환했습니다");
+  return text;
+}
+
+/**
  * HuggingFace FLUX 모델로 도시 이미지를 생성하고 Supabase Storage에 업로드한다.
  */
 export async function generateImage(cityName: string, prompt?: string): Promise<string> {
-  const fluxPrompt = buildFluxPrompt(cityName, undefined, prompt);
+  const fluxPrompt = await buildFluxPromptWithGemini(cityName, prompt);
   const blob = await generateImageWithFlux(fluxPrompt);
 
   const safeCity = cityName

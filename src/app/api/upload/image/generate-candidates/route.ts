@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-  generateImageWithFlux,
-  buildFluxPrompt,
-} from "@/infrastructure/imageGeneration/huggingFaceApi";
+import { buildFluxPromptWithGemini } from "@/infrastructure/admin/showcaseAiService";
+import { generateImageWithFlux } from "@/infrastructure/imageGeneration/huggingFaceApi";
 import { uploadImage } from "@/infrastructure/supabase/storageApi";
 
 interface GenerateCandidatesBody {
@@ -39,7 +37,7 @@ export async function POST(request: Request) {
       .replace(/\s+/g, "-")
       .toLowerCase() || `city-${Date.now()}`;
 
-    const fluxPrompt = buildFluxPrompt(cityName, title, prompt);
+    const fluxPrompt = await buildFluxPromptWithGemini(cityName, prompt ?? title);
     const now = Date.now();
 
     const blobs = await Promise.all(
