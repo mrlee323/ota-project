@@ -29,6 +29,7 @@ const editFormSchema = z
   .object({
     title: z.string().min(1, "타이틀을 입력해 주세요"),
     imageUrl: z.string().url("유효한 URL을 입력해 주세요"),
+    prompt: z.string().optional(),
     serviceEnabled: z.boolean(),
     startDate: z.string().min(1, "시작일을 선택해 주세요"),
     startTime: z.string().min(1, "시작 시간을 입력해 주세요"),
@@ -91,6 +92,7 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
     defaultValues: {
       title: showcase.title,
       imageUrl: showcase.imageUrl,
+      prompt: showcase.prompt ?? "",
       serviceEnabled: showcase.serviceEnabled,
       startDate: format(new Date(showcase.startDate), "yyyy-MM-dd"),
       startTime: format(new Date(showcase.startDate), "HH:mm"),
@@ -128,7 +130,7 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
   });
 
   const generateTitleMutation = useMutation({
-    mutationFn: () => generateShowcaseTitle(showcaseService, showcase.cityName),
+    mutationFn: () => generateShowcaseTitle(showcaseService, showcase.cityName, watch("prompt") || undefined),
     onSuccess: (title) => {
       setValue("title", title, { shouldValidate: true });
       pushToast({
@@ -152,6 +154,7 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
       const url = await generateImageUpload({
         cityName: showcase.cityName,
         title: watch("title") || showcase.title,
+        prompt: watch("prompt") || undefined,
         folder: "showcase",
       });
       setValue("imageUrl", url, { shouldValidate: true });
@@ -223,6 +226,7 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
     updateMutation.mutate({
       title: values.title,
       imageUrl: values.imageUrl,
+      prompt: values.prompt?.trim() || undefined,
       serviceEnabled: values.serviceEnabled,
       startDate: new Date(`${values.startDate}T${values.startTime}:00`).toISOString(),
       endDate: new Date(`${values.endDate}T${values.endTime}:00`).toISOString(),
@@ -254,6 +258,20 @@ function ShowcaseEditForm({ id, showcase }: ShowcaseEditFormProps) {
           {generateTitleMutation.isError && (
             <p className="text-xs text-red-500">타이틀 생성에 실패했습니다. 다시 시도해 주세요.</p>
           )}
+
+          {/* AI 프롬프트 */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">
+              AI 프롬프트{" "}
+              <span className="font-normal text-gray-400">(선택 — 타이틀·이미지 재생성 시 반영)</span>
+            </label>
+            <textarea
+              rows={2}
+              placeholder="예: 럭셔리, 고급스러운 분위기, 프리미엄 서비스"
+              className="flex w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none"
+              {...register("prompt")}
+            />
+          </div>
 
           {/* 이미지 URL + 미리보기 */}
           <div className="space-y-2">

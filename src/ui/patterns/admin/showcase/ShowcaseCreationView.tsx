@@ -1521,6 +1521,7 @@ function ShowcaseCreationViewContent() {
           cityName: city.cityName.trim(),
           title: city.title.trim(),
           imageUrl: city.imageUrl.trim(),
+          prompt: city.prompt?.trim() || undefined,
           hotels: city.hotels,
           serviceEnabled: true,
           startDate: toIsoStart(city.startDate),
