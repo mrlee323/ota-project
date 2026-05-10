@@ -62,21 +62,6 @@ npm run dev
 
 ---
 
-## 🤖 AI-Driven Commit Workflow
-
-프로젝트의 일관된 품질 관리와 신속한 기록을 위해 AI 에이전트 기반의 커밋 시스템을 활용합니다.
-
-### 가동 프로세스 (Shortcut: `gc`)
-
-코드 수정 후 Cursor AI에게 **"gc"** 또는 **"자동 커밋"** 요청 시 다음 과정이 자동 수행됩니다.
-
-1.  **Stage**: 변경 사항 자동 스테이징 (`git add .`)
-2.  **Analysis**: `gen-commit.ts`를 통한 아키텍처 변경 분석
-3.  **Synthesis**: Conventional Commits 형식을 준수하는 AI 메시지 생성
-4.  **Verification**: Husky(Lint/Format)를 통한 최종 검증 후 커밋 기록
-
----
-
 ## 💡 개발 원칙
 
 1. **Pragmatic Approach**: 무조건적인 패턴 적용보다 현재 상황에 가장 적합한 단순한 해결책 우선.
