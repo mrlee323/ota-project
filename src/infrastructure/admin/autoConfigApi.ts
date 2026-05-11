@@ -1,4 +1,3 @@
-import { createClient } from "@/infrastructure/supabase/server";
 import { createServiceClient } from "@/infrastructure/supabase/serviceClient";
 import {
   autoConfigSchema,
@@ -44,8 +43,8 @@ function rowToConfig(row: Record<string, unknown>): AutoConfig {
 }
 
 export async function getAutoConfig(): Promise<AutoConfig> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const db = createServiceClient();
+  const { data, error } = await db
     .from("showcase_auto_config")
     .select("*")
     .limit(1)
@@ -61,6 +60,14 @@ export async function updateAutoConfig(
 ): Promise<AutoConfig> {
   const db = createServiceClient();
 
+  const { data: existing } = await db
+    .from("showcase_auto_config")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (!existing) throw new Error("auto config 행을 찾을 수 없습니다");
+
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (input.enabled !== undefined) patch.enabled = input.enabled;
   if (input.intervalType !== undefined) patch.interval_type = input.intervalType;
@@ -74,6 +81,7 @@ export async function updateAutoConfig(
   const { data, error } = await db
     .from("showcase_auto_config")
     .update(patch)
+    .eq("id", existing.id)
     .select()
     .single();
 
