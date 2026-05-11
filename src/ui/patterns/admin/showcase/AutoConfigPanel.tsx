@@ -220,7 +220,7 @@ function AutoConfigEditForm({ config, onSave, onCancel, isSaving }: AutoConfigEd
             value={newCityInput}
             onChange={(e) => setNewCityInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 handleAddCity();
               }
@@ -319,7 +319,11 @@ interface GenerateResult {
   eventIds: string[];
 }
 
-export function AutoConfigPanel() {
+interface AutoConfigPanelProps {
+  onGenerateStart?: (cities: string[]) => void;
+}
+
+export function AutoConfigPanel({ onGenerateStart }: AutoConfigPanelProps) {
   const queryClient = useQueryClient();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -368,6 +372,7 @@ export function AutoConfigPanel() {
       const data = (await res.json()) as GenerateResult;
       if (!res.ok || !data.ok) throw new Error("생성 요청 실패");
       setGenerateStatus("success");
+      onGenerateStart?.(config.suggestedCities);
       setTimeout(() => setGenerateStatus("idle"), 4000);
     } catch {
       setGenerateStatus("error");
