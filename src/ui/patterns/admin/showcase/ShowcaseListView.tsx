@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
@@ -12,15 +13,58 @@ import {
   isShowcaseScheduled,
 } from "@/domain/admin/showcaseContent";
 import { showcaseService } from "@/infrastructure/admin/showcaseServiceClient";
+import { createClient } from "@/infrastructure/supabase/client";
 import { Button } from "@/ui/components/Button";
 import { Card, CardContent } from "@/ui/components/Card";
+import { useToast } from "@/ui/components/Toast";
 import { AutoConfigPanel } from "./AutoConfigPanel";
 
 // ─── ShowcaseListView 컴포넌트 ──────────────────────────────────────────────
 
+interface GeneratingCity {
+  city: string;
+  done: boolean;
+}
+
 /** 쇼케이스 컨텐츠 목록 뷰 */
 export function ShowcaseListView() {
   const queryClient = useQueryClient();
+  const { pushToast } = useToast();
+  const [generatingCities, setGeneratingCities] = useState<GeneratingCity[]>([]);
+
+  const handleGenerateStart = useCallback((cities: string[]) => {
+    setGeneratingCities(cities.map((city) => ({ city, done: false })));
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("showcase-content-inserts")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "showcase_content" },
+        (payload) => {
+          const cityName = (payload.new as Record<string, unknown>).city_name as string | undefined;
+          queryClient.invalidateQueries({ queryKey: ["showcase", "list"] });
+          pushToast({
+            title: "쇼케이스 생성 완료",
+            description: cityName ? `${cityName} 쇼케이스가 생성됐습니다.` : "새 쇼케이스가 생성됐습니다.",
+            variant: "success",
+          });
+          setGeneratingCities((prev) => {
+            const next = prev.map((g) => g.city === cityName ? { ...g, done: true } : g);
+            const allDone = next.length > 0 && next.every((g) => g.done);
+            if (allDone) setTimeout(() => setGeneratingCities([]), 2500);
+            return next;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient, pushToast]);
 
   const {
     data: showcaseList,
@@ -101,7 +145,7 @@ export function ShowcaseListView() {
       </div>
 
       {/* 자동 생성 설정 패널 */}
-      <AutoConfigPanel />
+      <AutoConfigPanel onGenerateStart={handleGenerateStart} />
 
       {/* 노출 상태 요약 */}
       {showcaseList && showcaseList.length > 0 && (() => {
@@ -262,6 +306,33 @@ export function ShowcaseListView() {
         </CardContent>
       </Card>
 
+      {/* 우하단 생성 진행 패널 */}
+      {generatingCities.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 w-64 rounded-xl border border-gray-200 bg-white shadow-xl">
+          <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" />
+            </span>
+            <p className="text-sm font-semibold text-gray-800">AI 생성 중</p>
+          </div>
+          <ul className="space-y-2 px-4 py-3">
+            {generatingCities.map(({ city, done }) => (
+              <li key={city} className="flex items-center justify-between text-sm">
+                <span className={done ? "text-gray-400 line-through" : "text-gray-700"}>{city}</span>
+                {done ? (
+                  <span className="text-emerald-500 font-bold">✓</span>
+                ) : (
+                  <svg className="h-4 w-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
