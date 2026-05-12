@@ -5,6 +5,11 @@ AI 에이전트와 자동화 스크립트를 활용하여 극도의 개발 생�
 
 🔗 **Live Demo**: [https://ota-project.vercel.app](https://ota-project.vercel.app)
 
+
+<p>
+  <img src="https://aapvsizzcugmfsxakpvi.supabase.co/storage/v1/object/public/showcase-images/screenshots/showcase-admin.gif" />
+</p>
+
 ---
 
 ## 🔐 어드민 접속 방법
