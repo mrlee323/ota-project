@@ -55,6 +55,8 @@ dev.sh
 
 #sql
 *.sql
+# 단, 마이그레이션은 추적한다 — 스키마 변경 이력이 코드와 같이 가야 한다
+!supabase/migrations/*.sql
 
 #task
 *.md

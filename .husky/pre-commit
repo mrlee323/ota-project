@@ -1,1 +1,20 @@
-npm test
+# 이 레포는 Node 22.12+ 가 필요하다 (.nvmrc · engines).
+# Node 20 에서는 require(ESM) 미지원으로 테스트 31파일이 전부 깨지는데
+# 원인이 안 보인다. 전역 PATH 를 건드리지 않고 여기서만 22 를 앞에 붙인다.
+for candidate in \
+  "$NVM_DIR/versions/node/v22"*/bin \
+  /opt/homebrew/opt/node@22/bin \
+  /usr/local/opt/node@22/bin
+do
+  [ -x "$candidate/node" ] && PATH="$candidate:$PATH" && break
+done
+export PATH
+
+major=$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0)
+if [ "$major" -lt 22 ]; then
+  echo "✗ Node 22.12+ 가 필요합니다 (현재: $(node -v 2>/dev/null || echo 없음))"
+  echo "  brew install node@22  또는  nvm install 22"
+  exit 1
+fi
+
+pnpm test -- --run

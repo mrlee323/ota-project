@@ -1,0 +1,108 @@
+{
+  "$meta": {
+    "version": "0.1.0",
+    "prefix": "md",
+    "status": "초안 — 값은 자유롭게 바꿔도 된다",
+    "rules": [
+      "이름은 계약이고 값은 계약이 아니다. 값은 바꿔도 되지만 이름은 유지한다.",
+      "삭제·개명 금지. 추가만 허용한다 (additive-only).",
+      "저장된 MD 는 토큰 «이름» 을 들고 있다 — 이름이 바뀌면 과거 페이지가 깨진다."
+    ]
+  },
+
+  "$colorPolicy": {
+    "note": "토큰이 모든 색을 정하지 않는다. MD 의 색은 두 층으로 갈린다.",
+    "system": "캠페인이 바뀌어도 그대로인 색 — 글자·구분선·표면·비활성. 여기(토큰)에 있다.",
+    "freeform": "기획전마다 다른 색 — 구간 배경, 포인트. 토큰이 아니라 «페이지 데이터» 에 저장된다.",
+    "textRule": "자유 배경 위 글자색도 토큰에서 고른다. 배경 명도에 따라 text.default 와 text.inverse 중 하나로 자동 결정한다 — 자유 입력이 접근성을 깨지 않게 하는 장치다.",
+    "freeformSlots": ["sectionBgColor", "pointColor"]
+  },
+
+  "primitive": {
+    "$comment": "의미색이 참조하는 원시 팔레트. 모듈에서 직접 쓰지 않는다 — 아래 color.* 를 쓴다.",
+    "blue600": "#1D4ED8",
+    "blue500": "#3B82F6",
+    "blue100": "#DBEAFE",
+    "gray900": "#111827",
+    "gray700": "#374151",
+    "gray500": "#6B7280",
+    "gray300": "#D1D5DB",
+    "gray100": "#F3F4F6",
+    "gray50": "#F9FAFB",
+    "white": "#FFFFFF",
+    "red500": "#EF4444"
+  },
+
+  "color": {
+    "text": {
+      "default": "#111827",
+      "secondary": "#374151",
+      "tertiary": "#6B7280",
+      "disabled": "#D1D5DB",
+      "inverse": "#FFFFFF",
+      "brand": "#1D4ED8",
+      "sale": "#EF4444"
+    },
+    "bg": {
+      "$comment": "시스템 요소용 배경이다. 프로모션 배경을 고르는 팔레트가 아니다 — 그건 자유 입력이다.",
+      "default": "#FFFFFF",
+      "subtle": "#F9FAFB",
+      "muted": "#F3F4F6",
+      "brand-subtle": "#DBEAFE",
+      "disabled": "#F3F4F6"
+    },
+    "border": {
+      "default": "#D1D5DB",
+      "subtle": "#F3F4F6",
+      "strong": "#111827",
+      "focus": "#3B82F6"
+    },
+    "action": {
+      "primary": "#1D4ED8",
+      "neutral": "#111827"
+    },
+    "overlay": {
+      "dark-30": "rgba(0,0,0,0.3)",
+      "dark-50": "rgba(0,0,0,0.5)",
+      "dark-70": "rgba(0,0,0,0.7)"
+    }
+  },
+
+  "tone": {
+    "$comment": "freeform 색에서 파생되는 단계. 담당자가 배경색 하나를 고르면 나머지가 자동으로 정해져 페이지 안에서 색이 따로 놀지 않는다.",
+    "$rule": "파생 계산은 렌더 시 한 곳에서 한다. 모듈 CSS 는 --md-tone-* 를 읽기만 한다.",
+    "surface": { "mix": "white", "pct": 92 },
+    "subtle": { "mix": "white", "pct": 78 },
+    "base": { "mix": "white", "pct": 0 },
+    "strong": { "mix": "black", "pct": 18 },
+    "ink": { "mix": "black", "pct": 45 }
+  },
+
+  "text": {
+    "$comment": "합성 이름 — {크기}-{행간}-{굵기}. 실사 표본의 글자 크기 분포에서 뽑았다.",
+    "display-tight-bold": { "size": 34, "lineHeight": 1.1, "weight": 700 },
+    "display-relaxed-bold": { "size": 34, "lineHeight": 1.4, "weight": 700 },
+    "heading-tight-bold": { "size": 24, "lineHeight": 1.1, "weight": 700 },
+    "heading-relaxed-bold": { "size": 24, "lineHeight": 1.5, "weight": 700 },
+    "body-tight-regular": { "size": 16, "lineHeight": 1.3, "weight": 400 },
+    "body-relaxed-regular": { "size": 16, "lineHeight": 1.6, "weight": 400 },
+    "body-relaxed-bold": { "size": 16, "lineHeight": 1.6, "weight": 700 },
+    "caption-relaxed-regular": { "size": 13, "lineHeight": 1.6, "weight": 400 }
+  },
+
+  "space": { "0": 0, "2": 2, "4": 4, "8": 8, "12": 12, "16": 16, "24": 24, "32": 32, "40": 40, "56": 56 },
+  "radius": { "0": 0, "4": 4, "8": 8, "12": 12, "16": 16, "full": 9999 },
+  "shadow": {
+    "card": "0 1px 3px rgba(0,0,0,0.08)",
+    "floating": "0 4px 16px rgba(0,0,0,0.12)"
+  },
+  "layout": {
+    "$comment": "구간 여백은 웹 56 / 모바일 40 으로 통일한다.",
+    "content-max": 1180,
+    "breakpoint-mobile": 768,
+    "gutter-desktop": 24,
+    "gutter-mobile": 16,
+    "section-gap-desktop": 56,
+    "section-gap-mobile": 40
+  }
+}
