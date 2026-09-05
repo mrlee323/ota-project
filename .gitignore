@@ -56,3 +56,6 @@ dev.sh
 
 #task
 *.md
+# 단, 문서는 추적한다 (docs/ 와 루트 README)
+!README.md
+!docs/**/*.md
