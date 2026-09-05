@@ -421,7 +421,7 @@ export function normalizeGroups(blocks: MdBlock[]): MdBlock[]
 | 모듈 | 필드 | 근거 |
 |---|---|---|
 | `hero` | `imageUrl` `title` `subtitle` `period` `link` | 실사 7/7 |
-| `image` | `imageUrl` `alt`(必, NFR-2) `link` | 이미지 슬라이스 ~280 |
+| `image` | `imageUrl` `alt`(必, NFR-2) `link` | 이미지 슬라이스 ~280 · 캔버스에서 **AI 생성** 가능 (FR-11) |
 | `section-title` | `title` `subtitle` `sectionBgColor`(color-free) | 야놀자 11섹션 |
 | `hotel-card-list` | `hotelRefs`(호텔 id 배열) `layout`(grid\|carousel) | 야놀자 전 섹션 |
 | `notes` | `title` `items`(textarea, repeatable) | 6/6 · 텍스트 필수 |
@@ -508,8 +508,10 @@ create index on md_page_events (page_id, event, created_at);
 - [ ] 호텔 후보 주입 + id 실재 검증 (FR-5.5)
 - [ ] `md_ai_runs` 적재 · **AC-4** 통과율 측정
 
-### P5 · 팬아웃
+### P5 · 이미지 생성 · 팬아웃
 
+- [ ] `generateModuleImage()` — 캔버스 「AI로 만들기」 (FR-11 · [llm.md §4](./llm.md))
+- [ ] 후보 제시 UI · 일일 상한
 - [ ] `opengraph-image.tsx` — `hero` 값으로 OG 생성
 
 ---
