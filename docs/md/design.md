@@ -414,7 +414,107 @@ export function normalizeGroups(blocks: MdBlock[]): MdBlock[]
 
 ---
 
-## 6. 모듈 6종 명세
+## 6. 서비스 렌더링 — 어드민에서 만든 MD 가 어떻게 뜨나
+
+### 전달 형태
+
+```
+어드민 캔버스 ──▶ md_pages.page (JSONB)  ──▶ /md/[slug]
+                    모듈 배열                  MdPageRenderer
+```
+
+**서비스는 MD 를 위한 코드를 짜지 않는다.** 페이지가 하는 일은 JSON 을 읽어
+`registry` 에서 컴포넌트를 찾아 순회하는 것뿐이다.
+
+```typescript
+// app/md/[slug]/page.tsx  — 서버 컴포넌트
+export default async function MdPage({ params }) {
+  const row = await getPublishedMdPage(params.slug);   // 기간 밖이면 null → 404
+  if (!row) notFound();
+  return <MdPageRenderer page={row.page} />;
+}
+```
+
+```typescript
+// ui/patterns/md/MdPageRenderer.tsx
+export function MdPageRenderer({ page }: { page: MdPage }) {
+  return page.blocks.map((b) => {
+    const C = REGISTRY[b.moduleType];
+    if (!C) return null;                 // D5 — 모르는 타입은 스킵. 던지지 않는다
+    return <C key={b.id} {...b.values} />;
+  });
+}
+```
+
+모듈이 늘어도 이 파일은 안 바뀐다. 새 모듈 배포 전에 저장된 페이지가 열려도 나머지는 뜬다.
+
+### 두 층으로 가른다 — 골격과 가격
+
+Q1 에서 호텔 카드를 **id 참조**로 정했다 → 가격은 조회 시점 값(FR-6.3).
+그런데 NFR-1 은 LCP 2.5s 이고 기획전은 발송 직후 트래픽이 몰린다.
+**조회 시점 가격과 정적 캐시는 그냥은 양립하지 않는다.**
+
+| 층 | 무엇 | 어떻게 |
+|---|---|---|
+| **골격** | 모듈 배열 · 텍스트 · 이미지 · 링크 | 서버 컴포넌트 + **ISR**. 발행 시 `revalidatePath` 로 즉시 반영 |
+| **가격·재고** | 호텔 카드의 변동 값 | **클라이언트에서 채운다.** 카드 골격(이름·사진·링크)은 서버가 그린다 |
+
+```typescript
+// HotelCardList — 서버 컴포넌트
+//   호텔의 «안 변하는 것»(이름·사진·지역)은 여기서 그린다
+//   가격·재고만 클라이언트 자식이 채운다 → 카드가 CLS 없이 자리를 잡는다
+<HotelCard hotel={base}>
+  <HotelPrice hotelId={base.id} />   {/* "use client" */}
+</HotelCard>
+```
+
+**렌더 전략은 나중에 켜도 되지만 컴포넌트 경계는 처음부터 나눈다.**
+`revalidate` 를 켜는 건 한 줄이고, 골격/가격을 나중에 가르는 건 구조를 뒤집는 일이다.
+그래서 **P0 부터 이 경계로 둔다.**
+
+### 캐시 무효화
+
+| 사건 | 처리 |
+|---|---|
+| 발행 / 재발행 | `revalidatePath('/md/' + slug)` |
+| 노출 기간 종료 | `getPublishedMdPage` 가 기간을 보고 404 — 캐시 태그에 기간을 넣지 않는다 |
+| 모듈 컴포넌트 수정 | 배포가 곧 무효화 (AC-5) |
+
+### 스타일 전달
+
+모듈 CSS 는 서비스 번들에 **정적으로** 들어가야 한다.
+
+| 규칙 | 이유 |
+|---|---|
+| Tailwind 클래스를 **동적으로 조립하지 않는다** (`bg-${c}` 금지) | 빌드가 클래스를 못 찾아 스타일이 사라진다 |
+| freeform 색(`sectionBgColor` 등)은 **인라인 CSS 변수**로 넘긴다 | 값이 페이지 데이터라 빌드 시점에 모른다 |
+| `tone` 파생은 렌더 시 **한 곳**에서 계산해 `--md-tone-*` 로 주입 | 모듈 CSS 는 읽기만 한다 |
+
+```tsx
+<section style={{ "--md-bg": values.sectionBgColor, "--md-tone-strong": tone.strong }}>
+```
+
+### draft 미리보기
+
+발행 전 페이지는 공개 URL 에서 안 보인다(FR-4.2). 미리보기는 Next 의 **Draft Mode** 로 연다 —
+같은 `/md/[slug]` 라우트를 쓰고, 렌더러도 같다.
+
+```
+/api/md/preview?slug=...&token=...   →  draftMode().enable()  →  /md/[slug]
+```
+
+**별도 미리보기 라우트를 만들지 않는다.** 만드는 순간 «미리보기에선 됐는데 발행하니 다르다» 가 생긴다.
+어드민 캔버스의 미리보기도 이 주소를 iframe 으로 띄운다 (FR-3.4).
+
+### 안 하는 것
+
+- **앱(WebView) 대응** — 웹 반응형까지다 (요구사항 §2 비목표)
+- **페이지별 커스텀 CSS 주입** — 자유도는 필드 등급으로만 준다 (D7)
+- **런타임 모듈 로딩** — 모듈은 빌드에 포함된다. 배포 없이 새 모듈이 도는 구조는 만들지 않는다
+
+---
+
+## 7. 모듈 6종 명세
 
 필드는 실사에서 실제로 쓰인 것만 넣는다.
 
@@ -438,7 +538,7 @@ export function normalizeGroups(blocks: MdBlock[]): MdBlock[]
 
 ---
 
-## 7. 단계
+## 8. 단계
 
 ### P0 · 관통
 
@@ -448,7 +548,7 @@ export function normalizeGroups(blocks: MdBlock[]): MdBlock[]
 - [ ] `hero` 정의 + 컴포넌트 + 양쪽 registry
 - [ ] `md_pages` 테이블 + `mdPageApi`
 - [ ] `packages/design-system` 워크스페이스 + 토큰 초안 (§4 · D8)
-- [ ] `/md/[slug]` 렌더
+- [ ] `/md/[slug]` 렌더 (§6) — **골격/가격 컴포넌트 경계를 여기서 정한다**
 - [ ] 모르는 타입 스킵 테스트 (**AC-6**)
 
 ### P1 · 모듈 5종 + 재현 관문 ← **여기가 게이트**
@@ -516,7 +616,7 @@ create index on md_page_events (page_id, event, created_at);
 
 ---
 
-## 8. 측정 (이력용)
+## 9. 측정 (이력용)
 
 작업하면서 그때그때 남긴다. 나중에는 못 만든다.
 
@@ -530,7 +630,7 @@ create index on md_page_events (page_id, event, created_at);
 
 ---
 
-## 9. 미결
+## 10. 미결
 
 **없다.** Q1~Q8 이 전부 닫혔다.
 
@@ -547,7 +647,7 @@ create index on md_page_events (page_id, event, created_at);
 
 ---
 
-## 10. P5 이후 — MCP (M0~M4)
+## 11. P5 이후 — MCP (M0~M3)
 
 **캔버스를 대신하는 게 아니라 캔버스 앞을 푼다.** 모듈이 100개가 됐을 때 담당자가
 고를 수 있게 하고(`search_modules`·`suggest_template`), 어떤 구성이 어울리는지 판단을 돕고,
