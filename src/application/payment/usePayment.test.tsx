@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { usePayment, PaymentProvider } from "./usePayment";
 
 // ─── 테스트 헬퍼 ─────────────────────────────────────────────────────────────
@@ -13,13 +13,18 @@ function createWrapper(props?: {
   timeoutMs?: number;
 }) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(PaymentProvider, {
-      environment: props?.environment ?? "PC",
-      failureRate: props?.failureRate ?? 0,
-      delayMs: props?.delayMs ?? 0,
-      timeoutMs: props?.timeoutMs ?? 999_999_999,
-      children,
-    });
+    // .tsx 로 두고 JSX 를 쓴다 — createElement 로는 children 을 props 에 넣어야 해서
+    // react/no-children-prop 과 PaymentProviderProps 의 children 필수 요구가 충돌한다
+    return (
+      <PaymentProvider
+        environment={props?.environment ?? "PC"}
+        failureRate={props?.failureRate ?? 0}
+        delayMs={props?.delayMs ?? 0}
+        timeoutMs={props?.timeoutMs ?? 999_999_999}
+      >
+        {children}
+      </PaymentProvider>
+    );
   };
 }
 

@@ -7,6 +7,9 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
+  // .tsx 테스트에서 JSX 를 쓸 수 있게 automatic 런타임을 켠다.
+  // 없으면 esbuild 가 classic(React.createElement)으로 변환해 ReferenceError 가 난다.
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: {
       "@": root + "src",

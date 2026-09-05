@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { User, Heart, Menu, X, Globe, ChevronDown, LogOut } from "lucide-react";
 import { createClient } from "@/infrastructure/supabase/client";
 import { logoutAction } from "@/application/auth/actions";
@@ -45,12 +46,12 @@ export function Header({ initialAuthenticated = false }: HeaderProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-8">
-            <a href="/" className="flex items-center gap-1.5">
+            <Link href="/" className="flex items-center gap-1.5">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-brand">
                 <span className="text-white text-sm font-black">T</span>
               </div>
               <span className="font-black text-xl tracking-tight text-brand">OTA</span>
-            </a>
+            </Link>
 
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-1">
