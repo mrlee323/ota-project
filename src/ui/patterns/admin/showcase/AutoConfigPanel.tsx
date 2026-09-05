@@ -23,7 +23,7 @@ const autoConfigFormSchema = z
     promoTitle: z.string().min(1, "프로모 타이틀을 입력해 주세요"),
     enabled: z.boolean(),
     intervalType: intervalTypeSchema,
-    intervalValue: z.coerce.number().int().positive("양의 정수를 입력해 주세요"),
+    intervalValue: z.number().int().positive("양의 정수를 입력해 주세요"),
     nextDate: z.string().min(1, "날짜를 선택해 주세요"),
     suggestedCities: z.array(z.object({ city: z.string().min(1) })),
     contentStartDate: z.string().min(1, "시작일을 선택해 주세요"),
@@ -189,6 +189,9 @@ function AutoConfigEditForm({ config, onSave, onCancel, isSaving }: AutoConfigEd
           min={1}
           error={errors.intervalValue?.message}
           {...register("intervalValue", {
+            // zod4 에서 z.coerce.number() 의 입력 타입이 unknown 이라 폼 제네릭이 깨진다.
+            // 스키마는 z.number() 로 두고 문자열→숫자 변환은 RHF 에 맡긴다.
+            valueAsNumber: true,
             onChange: (e) => recalcDates(intervalType, Number(e.target.value), nextDate),
           })}
         />

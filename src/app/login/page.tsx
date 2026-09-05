@@ -34,7 +34,7 @@ export default function LoginPage() {
     });
 
     if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message ?? "입력값이 올바르지 않습니다");
+      setError(parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다");
       setIsLoading(false);
       return;
     }

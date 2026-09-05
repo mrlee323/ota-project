@@ -24,7 +24,7 @@ export async function loginAction(formData: FormData): Promise<void> {
   });
 
   if (!parsed.success) {
-    const errorMessage = parsed.error.errors[0]?.message ?? "입력값이 올바르지 않습니다";
+    const errorMessage = parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다";
     redirect(`/login?error=${encodeURIComponent(errorMessage)}`);
   }
 
@@ -69,7 +69,7 @@ export async function signupAction(formData: FormData): Promise<void> {
   });
 
   if (!parsed.success) {
-    const errorMessage = parsed.error.errors[0]?.message ?? "입력값이 올바르지 않습니다";
+    const errorMessage = parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다";
     redirect(`/signup?error=${encodeURIComponent(errorMessage)}`);
   }
 

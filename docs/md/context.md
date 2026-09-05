@@ -148,7 +148,10 @@ pnpm 워크스페이스로 가르면 경계는 서고 비용은 0 이다 (D8).
 |---|---|
 | `mcp-handler` | Vercel 공식 · Apache-2.0 · 주간 94만 다운로드 · v2 는 **zod 4 · Node 20+ · `@modelcontextprotocol/server` ^2** 요구 |
 | 프로젝트 | Next **14.2** ✅ · Node **v20.18.1** ✅ · zod **3.22 → 4 필요** |
-| zod 3→4 | **제거된 API**(`invalid_type_error` `required_error` `z.record()` 단일인자 `errorMap` `deepPartial`) 사용처가 레포에 **하나도 없다.** deprecated 지만 동작하는 것(`z.string().email()` 등)은 24개 파일에 있으나 **고칠 필요 없다** |
+| zod 3→4 | **실제로 깨진 곳은 2종이었다** (SETUP 에서 수정 완료) — ① `error.errors` → **`error.issues`** (3곳) ② `z.coerce.number()` 는 입력 타입이 `unknown` 이라 react-hook-form 제네릭이 깨진다 → `z.number()` + `register(valueAsNumber)`. 나머지(`z.string().email()` 등 24개 파일)는 deprecated 지만 동작한다 |
+| **Node 22 필수** | Node 20.18 에서는 `require(ESM)` 이 안 돼 **테스트가 통째로 실패**한다(jsdom 28 · vite 7). `.nvmrc` = 22.12.0, `engines.node >= 22.12.0` 으로 고정했다 |
+| pnpm | corepack 서명 키가 오래돼 `pnpm` 이 안 뜬다. `packageManager: pnpm@9.15.9` 를 고정해 해결. 최초 1회만 `COREPACK_INTEGRITY_KEYS=0` 필요했다 (근본 해결은 `npm i -g corepack@latest`) |
+| eslint | 레포의 `eslint.config.mjs` 는 flat config 인데 `eslint-config-next` 가 14.2.0 이라 **린터가 아예 안 돌고 있었다.** v15 로 올리고 `FlatCompat` 로 감싸 해결 |
 | Codex CLI | 원격 Streamable HTTP 지원. `codex mcp add <name> --url <URL>` · `bearer_token_env_var`. `~/.codex/config.toml` 을 CLI·IDE 확장·ChatGPT 데스크톱이 **공유** |
 | ChatGPT 웹 커넥터 | 개발자 모드 필요. 조직 플랜에 따라 안 켜지거나 쓰기가 막힌 사례 있음 → **Codex 를 1순위로 둔다** |
 | 무료 LLM 티어 | Cerebras 1M/일 · OpenAI 데이터공유(소형 2.5~10M/일, 학습 공유) · Mistral 1B/월(2 RPM) · Groq 6K TPM(작다) · OpenRouter 50 RPD |

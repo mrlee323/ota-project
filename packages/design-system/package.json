@@ -1,0 +1,12 @@
+{
+  "name": "@ds/design-system",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MD 디자인시스템 — 토큰과 프리미티브. src 는 이 진입점으로만 접근한다.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./tokens/md.json"
+  },
+  "files": ["src", "tokens"]
+}

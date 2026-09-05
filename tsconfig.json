@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@ds/design-system": [
+        "./packages/design-system/src/index.ts"
+      ],
+      "@ds/design-system/tokens": [
+        "./packages/design-system/tokens/md.json"
       ]
     }
   },

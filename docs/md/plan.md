@@ -49,7 +49,19 @@ docs/md/context.md 와 docs/md/plan.md 를 먼저 읽어라.
 
 ### 스택
 
-Next.js 14 App Router · TypeScript · **zod 4** · Tailwind · Supabase · pnpm · vitest
+Next.js 14 App Router · TypeScript · **zod 4** · Tailwind · Supabase · vitest
+
+**Node 22.12+ · pnpm 9.15.9** — `.nvmrc` 와 `packageManager` 에 고정돼 있다.
+Node 20 으로 돌리면 테스트가 통째로 실패한다 (`require(ESM)` 미지원).
+
+```bash
+nvm use          # 또는 PATH 에 node@22
+pnpm install
+pnpm test -- --run
+```
+
+`.env.local` 이 필요하다 — `.env.example` 을 복사해 채운다.
+**Supabase 키가 없으면 `pnpm build` 가 프리렌더 단계에서 실패한다** (타입체크·테스트는 통과).
 
 ### 레이어 (DDD — 기존 구조를 따른다)
 
@@ -117,7 +129,10 @@ SETUP ──▶ P0 ──┬──▶ P1 ──▶ P2 ──▶ P3 ──▶ P4 
 **선행** 없음 · **크기** 반나절
 
 **할 일**
-- `zod` 3.22 → 4.x (제거된 API 사용처 없음 — 확인 완료)
+- `zod` 3.22 → 4.x — **`error.errors` → `error.issues`(3곳)**, `z.coerce.number()` → `z.number()` + `valueAsNumber`
+- **Node 22 로 올린다** — 20.18 은 `require(ESM)` 이 안 돼 테스트가 전부 실패한다. `.nvmrc` · `engines`
+- `packageManager: pnpm@9.15.9` 고정 (corepack 서명 버그 우회)
+- `eslint-config-next` v15 + `FlatCompat` — 기존 flat config 가 안 돌고 있었다
 - `pnpm-workspace.yaml` 에 `packages:` 추가 → `packages/design-system` 생성
 - `src/` → `@ds` 내부 경로 import 금지 lint 규칙
 - `pnpm add mcp-handler@^2 @modelcontextprotocol/server@^2 openai`
@@ -316,7 +331,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 
 | 작업 | 상태 | 브랜치 | 비고 |
 |---|---|---|---|
-| `SETUP` | 대기 | | |
+| `SETUP` | **완료** | `feat/md-SETUP` | zod4 · Node22 · 워크스페이스 · lint 경계 |
 | `P0` | 대기 | | |
 | `P1` | 대기 | | ★ AC-1 관문 |
 | `P2` | 대기 | | |
