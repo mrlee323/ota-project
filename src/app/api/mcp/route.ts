@@ -1,5 +1,6 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { registerReadTools } from "@/infrastructure/mcp/tools";
+import { registerWriteTools } from "@/infrastructure/mcp/writeTools";
 
 // ─── MD 자동화 MCP 서버 ─────────────────────────────────────────────────────
 //
@@ -8,9 +9,14 @@ import { registerReadTools } from "@/infrastructure/mcp/tools";
 //
 // 도구 정의는 infrastructure/mcp/tools.ts 에 둔다 — 이 파일은 배관만 맡는다.
 
-const handler = createMcpHandler(registerReadTools, {
-  serverInfo: { name: "md-automation", version: "0.2.0" },
-});
+const handler = createMcpHandler(
+  (server) => {
+    registerReadTools(server);
+    // 쓰기는 draft 만 만든다. publish·delete 도구는 만들지 않는다 (mcp.md §4)
+    registerWriteTools(server);
+  },
+  { serverInfo: { name: "md-automation", version: "0.3.0" } },
+);
 
 /**
  * S0 는 단일 토큰이다. `md_mcp_tokens` 테이블은 M3 에서 붙인다.

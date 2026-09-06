@@ -340,7 +340,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | `P5` | **완료** | `feat/md-P5` | OG · 문맥 이미지 생성 둘 다 실물 확인 |
 | `S0` | **로컬 확인 완료** | `feat/md-S0` | curl 로 initialize·tools/list·tools/call 통과. 배포·클라이언트 연결은 남음 |
 | `M1` | **완료** | `feat/md-M1` | 도구 7종 · Q-M3 통과 (모듈 30종 검증) |
-| `M2` | 대기 | | |
+| `M2` | **로컬 완료** | `feat/md-M2` | 쓰기 3종 · 안전장치 확인. Q-M2(ChatGPT)는 배포 후 |
 | `M3` | 대기 | | |
 
 ### 파일럿에서 답할 질문 (답이 나오면 여기 적는다)
