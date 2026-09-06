@@ -58,3 +58,36 @@ export async function filterExistingHotelIds(ids: string[]): Promise<string[]> {
   const known = new Set(all.map((h) => h.id));
   return ids.filter((id) => known.has(id));
 }
+
+export interface HotelSearchHit {
+  id: string;
+  name: string;
+  location: string;
+  stars: number;
+  rating: number;
+}
+
+/**
+ * MCP·L1 용 호텔 검색.
+ *
+ * **여기서 나온 id 만 쓸 수 있다.** LLM 이 호텔을 지어내지 못하게 하는 원천이다 (FR-5.5).
+ * 가격은 주지 않는다 — 저장하면 굳고, 화면이 조회 시점 값으로 채운다 (Q1).
+ */
+export async function searchHotelsForMd(opts: {
+  keyword?: string;
+  minStars?: number;
+  limit?: number;
+}): Promise<HotelSearchHit[]> {
+  const all = await fetchHotelList();
+  const kw = opts.keyword?.trim().toLowerCase().replace(/\s+/g, "");
+
+  return all
+    .filter((h) => (opts.minStars ? h.stars >= opts.minStars : true))
+    .filter((h) =>
+      kw
+        ? [h.name, h.nameEn, h.location].some((f) => f.toLowerCase().replace(/\s+/g, "").includes(kw))
+        : true,
+    )
+    .slice(0, opts.limit ?? 10)
+    .map(({ id, name, location, stars, rating }) => ({ id, name, location, stars, rating }));
+}

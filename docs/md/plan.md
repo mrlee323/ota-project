@@ -339,7 +339,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | `P4` | **완료** | `feat/md-P4` | ★ AC-4 통과 — 1차 85% · 최종 95% |
 | `P5` | **완료** | `feat/md-P5` | OG · 문맥 이미지 생성 둘 다 실물 확인 |
 | `S0` | **로컬 확인 완료** | `feat/md-S0` | curl 로 initialize·tools/list·tools/call 통과. 배포·클라이언트 연결은 남음 |
-| `M1` | 대기 | | |
+| `M1` | **완료** | `feat/md-M1` | 도구 7종 · Q-M3 통과 (모듈 30종 검증) |
 | `M2` | 대기 | | |
 | `M3` | 대기 | | |
 
