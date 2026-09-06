@@ -51,7 +51,7 @@ export default async function MdListPage() {
             const s = stats[p.id] ?? { views: 0, clicks: 0 };
             return (
               <li key={p.id}>
-                <Link href={`/admin/md/${p.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50">
+                <Link href={`/admin/content/md/${p.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-gray-800">{p.title}</p>
                     <p className="mt-0.5 text-xs text-gray-400">

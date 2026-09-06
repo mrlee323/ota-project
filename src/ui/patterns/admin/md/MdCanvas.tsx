@@ -12,6 +12,7 @@ import { BlockFields } from "./BlockFields";
 import { MdPreview } from "./MdPreview";
 import { TemplatePicker } from "./TemplatePicker";
 import { PublishPanel } from "./PublishPanel";
+import { RequestForm } from "./RequestForm";
 import type { MdStatus } from "@/domain/md/status";
 
 interface Props {
@@ -84,13 +85,33 @@ export function MdCanvas({ pageId, slug, initialTitle, initialPage, status, star
 
   if (blocks.length === 0) {
     return (
-      <div className="mx-auto max-w-[860px] px-6 py-14">
+      <div className="mx-auto max-w-[980px] px-6 py-14">
         <h1 className="text-[22px] font-bold text-gray-800">어떤 기획전인가요?</h1>
         <p className="mt-1.5 text-sm leading-relaxed text-gray-500">
-          빈 화면 대신 이미 조립된 구성에서 시작합니다. 고른 뒤에 자유롭게 바꿀 수 있습니다.
+          요청서를 채우면 초안을 만들어 드립니다. 직접 구성을 골라 시작해도 됩니다.
         </p>
-        <div className="mt-6">
-          <TemplatePicker onPick={applyTemplate} />
+
+        <div className="mt-6 grid gap-6 md:grid-cols-[320px_1fr]">
+          {/* L1 — 요청서에서 값을 뽑아 템플릿에 꽂는다 */}
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <p className="mb-3 text-[13px] font-bold text-gray-800">요청서로 시작</p>
+            <RequestForm
+              onDone={(page, note) => {
+                setBlocks(page.blocks);
+                setMessage(note);
+              }}
+              onCancel={() => setMessage(null)}
+            />
+          </div>
+
+          <div>
+            <p className="mb-3 text-[13px] font-bold text-gray-800">구성 직접 고르기</p>
+            <TemplatePicker onPick={applyTemplate} />
+          </div>
+        </div>
+
+        {message ? <p className="mt-4 text-xs text-gray-600">{message}</p> : null}
+        <div className="hidden">
         </div>
         <p className="mt-5 text-xs text-gray-400">
           빈 페이지에서 시작하려면 아래 블록을 직접 얹으세요.

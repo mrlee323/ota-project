@@ -207,7 +207,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 - 「호텔 구간 추가」 버튼 + 묶음 테두리
 - 사용자 템플릿 저장 · 즐겨찾기
 
-**파일 소유권** `src/ui/patterns/admin/md/**` · `src/app/admin/md/**` · `src/domain/md/group.ts`
+**파일 소유권** `src/ui/patterns/admin/md/**` · `src/app/admin/content/md/**` · `src/domain/md/group.ts`
 **완료 판정** **AC-3** — T3 템플릿으로 **이미지 업로드 0회** 발행까지 간다
 **읽을 것** design.md §5(반복 묶음) · requirements.md FR-3·FR-9
 
@@ -225,7 +225,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 - `md_page_events` — 조회·클릭을 **블록 단위**로 적재
 - 어드민 목록에 조회수·클릭수
 
-**파일 소유권** `src/app/admin/md/**` · `src/app/api/md/**` · `src/infrastructure/md/**`
+**파일 소유권** `src/app/admin/content/md/**` · `src/app/api/md/**` · `src/infrastructure/md/**`
 **완료 판정**
 - **AC-5** — 모듈 여백을 바꾸면 재발행 없이 발행된 MD 에 반영된다
 - **AC-7** — CTA 클릭이 **그 블록의** 카운트로 잡힌다
@@ -336,7 +336,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | `P1` | **완료** | `feat/md-P1` | ★ AC-1·AC-2 통과 (테스트로 고정) |
 | `P2` | **핵심 완료** | main | 2단 캔버스(블록 패널 + 실시간 미리보기)·자동폼·구간추가·저장. 사용자 템플릿/즐겨찾기는 뒤로 |
 | `P3` | **완료** | `feat/md-P3` | AC-3·AC-5·AC-7 확인. 발행·기간·Draft Mode·블록 단위 측정 |
-| `P4` | 대기 | | ★ AC-4 |
+| `P4` | **코드 완료** | `feat/md-P4` | LLM 키가 있어야 AC-4 측정 가능 |
 | `P5` | 대기 | | |
 | `S0` | **로컬 확인 완료** | `feat/md-S0` | curl 로 initialize·tools/list·tools/call 통과. 배포·클라이언트 연결은 남음 |
 | `M1` | 대기 | | |

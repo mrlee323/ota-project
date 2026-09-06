@@ -44,7 +44,7 @@ export function AdminSidebar({ permissions, userEmail }: AdminSidebarProps) {
 
         {hasMd && (
           <Link
-            href="/admin/md"
+            href="/admin/content/md"
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             <LayoutTemplate size={16} />

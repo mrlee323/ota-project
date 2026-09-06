@@ -26,7 +26,7 @@ export function MdCreateButton() {
     setBusy(false);
 
     if (!res.ok) return setError(body.error ?? "생성에 실패했습니다");
-    router.push(`/admin/md/${body.id}`);
+    router.push(`/admin/content/md/${body.id}`);
   };
 
   return (
