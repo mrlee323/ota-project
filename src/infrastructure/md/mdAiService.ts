@@ -102,6 +102,9 @@ async function callOnce(
   const res = await getLlm().chat.completions.create({
     model: LLM_MODEL,
     messages,
+    // 넉넉히 준다. thinking 을 쓰는 모델은 여기가 좁으면 JSON 이 중간에 잘리고,
+    // 그러면 파싱 실패로 «모델이 스키마를 못 지켰다» 처럼 보인다 — 통과율이 왜곡된다
+    max_tokens: 4000,
     response_format: {
       type: "json_schema",
       json_schema: {

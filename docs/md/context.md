@@ -96,10 +96,18 @@ FR-1.3(모듈 추가 = 수정 2곳)이 깨진다.
 LLM 을 새로 세우는 안이었다. **이 레포에 이미 Gemini + FLUX + Supabase 업로드 배관이 있다.**
 새 모델·새 키를 세우지 않는다.
 
-### ❌ Gemini 를 그대로 쓰기
+### ❌ Gemini 를 그대로 쓰기 → ❌ Cerebras → ✅ Google AI Studio
 
-위와 반대 방향의 정정. 무료 한도가 작아 텍스트 추출용으로는 부족하다.
-**OpenAI 호환 엔드포인트 + `baseURL` 교체**로 간다. 이미지·카피는 기존 Gemini 를 유지한다.
+두 번 뒤집혔다. 기록해 둔다.
+
+1. 기존 Gemini SDK 를 그대로 확장 → 무료 한도가 작아 보여 폐기
+2. **Cerebras** 로 결정 → 실제 계정에서 **모든 모델이 402**, 활성화에 카드 등록 요구 (2026-09-05)
+3. **Google AI Studio 의 OpenAI 호환 엔드포인트**로 확정 —
+   `https://generativelanguage.googleapis.com/v1beta/openai/` · `gemini-2.5-flash`
+
+**교훈** — 공급자를 코드에 박지 않은 설계(`baseURL` 환경변수)가 값을 했다.
+두 번 갈아탔지만 코드는 한 줄도 안 고쳤다. 무료 티어 정보는 조사 시점과 실제가 다를 수 있으니
+**결정 전에 실제 호출로 확인한다.**
 
 ### ❌ tool use 로 페이지 JSON 만들기
 
@@ -164,7 +172,7 @@ pnpm 워크스페이스로 가르면 경계는 서고 비용은 0 이다 (D8).
 | eslint | 레포의 `eslint.config.mjs` 는 flat config 인데 `eslint-config-next` 가 14.2.0 이라 **린터가 아예 안 돌고 있었다.** v15 로 올리고 `FlatCompat` 로 감싸 해결 |
 | Codex CLI | 원격 Streamable HTTP 지원. `codex mcp add <name> --url <URL>` · `bearer_token_env_var`. `~/.codex/config.toml` 을 CLI·IDE 확장·ChatGPT 데스크톱이 **공유** |
 | ChatGPT 웹 커넥터 | 개발자 모드 필요. 조직 플랜에 따라 안 켜지거나 쓰기가 막힌 사례 있음 → **Codex 를 1순위로 둔다** |
-| 무료 LLM 티어 | Cerebras 1M/일 · OpenAI 데이터공유(소형 2.5~10M/일, 학습 공유) · Mistral 1B/월(2 RPM) · Groq 6K TPM(작다) · OpenRouter 50 RPD |
+| 무료 LLM 티어 | **Cerebras 는 카드 필요(402)** · Google AI Studio 는 카드 없이 발급 + OpenAI 호환 ✅ · Groq 6K TPM(작다) · OpenRouter 50 RPD |
 | 기존 코드 | `showcaseAiService.ts` 에 Gemini + FLUX + Supabase 업로드가 이미 있고, `buildFluxPromptWithGemini()` 는 **이미 「사람·얼굴 없는 풍경」으로 고정**돼 있다 |
 
 ---
@@ -183,6 +191,7 @@ pnpm 워크스페이스로 가르면 경계는 서고 비용은 0 이다 (D8).
 - [ ] 성과 측정을 나중으로 미룬다 → **P3 에 묶여 있다.** 미루면 영영 안 붙는다
 - [ ] 자유 입력(`free`) 필드를 늘린다 → 지금 3개뿐이다. 늘면 페이지가 다시 제각각이 된다
 - [ ] 회사 얘기를 문서에 쓴다 → **공개 레포다**
+- [ ] LLM 호출에 `max_tokens` 를 짜게 준다 → thinking 모델은 JSON 이 잘려 «스키마 위반» 처럼 보인다
 - [ ] ISR 페이지에서 쿠키를 읽는다(`draftMode`·세션) → **프로덕션에서만 500 이 난다.** 세션이 필요하면 라우트를 나눈다
 
 ---
