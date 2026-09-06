@@ -360,5 +360,6 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | 실사 규모 | 기획전 7건 · 이미지 378장 · 이미지 의존 ~90% | module-survey.md |
 | 모듈 추가 비용 | **2곳** — 등록 파일만. 테스트로 고정 (`moduleCost.test.ts`) | AC-2 |
 | AC-1 통과 | 실사 3건 구조 재현 (`reproduce.test.ts`) | P1 커밋 |
+| 수용기준 | **AC-1~7 전부 실측 통과** | — |
 | 이미지 0장 발행 | 허브·특가 템플릿으로 발행 성공 | AC-3 |
 | L1 1차 통과율 | **85% (17/20)** · 최종 95%. 실패는 전부 rate limit | AC-4 |
