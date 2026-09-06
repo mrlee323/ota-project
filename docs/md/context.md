@@ -174,6 +174,7 @@ pnpm 워크스페이스로 가르면 경계는 서고 비용은 0 이다 (D8).
 | ChatGPT 웹 커넥터 | 개발자 모드 필요. 조직 플랜에 따라 안 켜지거나 쓰기가 막힌 사례 있음 → **Codex 를 1순위로 둔다** |
 | 무료 LLM 티어 | **Cerebras 는 카드 필요(402)** · Google AI Studio 는 카드 없이 발급 + OpenAI 호환 ✅ · Groq 6K TPM(작다) · OpenRouter 50 RPD |
 | 기존 코드 | `showcaseAiService.ts` 에 Gemini + FLUX + Supabase 업로드가 이미 있고, `buildFluxPromptWithGemini()` 는 **이미 「사람·얼굴 없는 풍경」으로 고정**돼 있다 |
+| **이미지 공급자** | HF 가 `hf-inference` 를 내려 예전 경로는 **전부 410**. `router.huggingface.co/<provider>/v1/images/generations` 로 옮겼다 (2026-09-05 기준 `nscale` 이 live). 공급자·모델을 환경변수로 뺐다 |
 
 ---
 
