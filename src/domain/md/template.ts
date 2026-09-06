@@ -76,7 +76,7 @@ export const SYSTEM_TEMPLATES: Template[] = [
     id: "t3-hub",
     name: "허브·특가",
     description:
-      "구간마다 숙소 목록을 늘어놓는다. **이미지 없이 만들 수 있는 유일한 템플릿**이고, " +
+      "구간마다 숙소 목록을 늘어놓는다. 디자이너 이미지 없이 만들 수 있는 유일한 템플릿이고, " +
       "가격이 저절로 최신이 되므로 상시 운영에 가장 적합하다.",
     kind: "system",
     visibility: "private",

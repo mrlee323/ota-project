@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublishedMdPage } from "@/infrastructure/md/mdPageApi";
+import { resolveMdPage } from "@/infrastructure/md/resolveMdPage";
 import { MdPageRenderer } from "@/ui/patterns/md/MdPageRenderer";
 
 // ─── 골격 / 변동 값 두 층 (docs/md/design.md §6) ─────────────────────────────
@@ -40,9 +41,12 @@ export default async function MdPublicPage({ params }: Params) {
   // 발행 전이거나 노출 기간 밖이면 존재하지 않는 페이지다 (FR-4.3)
   if (!row) notFound();
 
+  // 골격 데이터는 서버에서 해석한다 — 캐시 대상이다
+  const resolved = await resolveMdPage(row.page);
+
   return (
     <main>
-      <MdPageRenderer page={row.page} />
+      <MdPageRenderer page={row.page} resolved={resolved} />
     </main>
   );
 }

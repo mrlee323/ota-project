@@ -1,23 +1,26 @@
 import { tokens } from "@ds/design-system";
-import { getHotelBases } from "@/infrastructure/md/hotelLookup";
+import type { HotelCardBase } from "@/infrastructure/md/hotelLookup";
 import { HotelPrice } from "./HotelPrice";
 
 export interface HotelCardListProps {
+  /** 저장되는 값 — 호텔 id 만 (Q1) */
   hotelRefs?: string[];
   layout?: "grid" | "carousel";
+  /** resolveMdPage 가 채워 넣는 골격 데이터 (design.md §6) */
+  hotels?: HotelCardBase[];
 }
 
 /**
- * 호텔 카드 목록 — 서버 컴포넌트.
+ * 호텔 카드 목록 — **데이터를 받아 그리기만 한다.**
  *
- * **여기가 골격 층이다** (design.md §6). 이름·사진·지역·등급처럼 거의 안 변하는 것만
- * 서버에서 그리고, 가격은 클라이언트 자식(HotelPrice)이 채운다.
- * 이 경계 덕분에 페이지를 ISR 로 캐시하면서도 가격은 최신일 수 있다.
+ * async 서버 컴포넌트로 만들면 어드민 캔버스(클라이언트)에서 같은 컴포넌트를 못 쓰고,
+ * 그러면 미리보기용 렌더러를 따로 만들게 된다 — 그 순간 FR-3.4 가 깨진다.
+ * 호텔 조회는 `resolveMdPage` 가 맡는다.
+ *
+ * 골격(이름·사진·지역·등급)은 여기서 그리고 가격은 클라이언트 자식이 채운다 —
+ * 그 경계 덕분에 페이지를 ISR 로 캐시하면서도 가격은 최신이다.
  */
-export async function HotelCardList({ hotelRefs, layout = "grid" }: HotelCardListProps) {
-  const ids = Array.isArray(hotelRefs) ? hotelRefs : [];
-  const hotels = await getHotelBases(ids);
-
+export function HotelCardList({ layout = "grid", hotels = [] }: HotelCardListProps) {
   // 저장된 호텔이 전부 사라졌으면 이 블록만 빠진다. 페이지는 뜬다
   if (hotels.length === 0) return null;
 

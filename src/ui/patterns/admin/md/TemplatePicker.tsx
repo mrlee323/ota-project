@@ -19,9 +19,17 @@ export function TemplatePicker({ onPick }: { onPick: (t: Template) => void }) {
           key={t.id}
           type="button"
           onClick={() => onPick(t)}
-          className="rounded-lg border border-gray-200 p-4 text-left hover:border-blue-400 hover:bg-blue-50"
+          className="rounded-lg border border-gray-200 p-4 text-left hover:border-brand hover:bg-brand-50"
         >
-          <p className="font-bold text-gray-800">{t.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-gray-800">{t.name}</p>
+            {/* 이미지 없이 만들 수 있다는 건 담당자에게도 보여야 한다 (AC-3) */}
+            {t.blocks.every((b) => b.moduleType !== "image") ? (
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-600">
+                이미지 0장
+              </span>
+            ) : null}
+          </div>
           <p className="mt-1 text-xs leading-relaxed text-gray-500">{t.description}</p>
           <p className="mt-2 text-xs text-gray-400">
             {t.blocks.map((b) => b.moduleType).join(" → ")}

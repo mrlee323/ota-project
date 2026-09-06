@@ -7,7 +7,14 @@ import { MODULE_REGISTRY } from "./registry";
  * **모듈이 100개가 돼도 이 파일은 바뀌지 않는다.** 하는 일은 registry 조회와 순회뿐이다.
  * 서비스는 MD 를 위한 코드를 따로 짜지 않는다 (design.md §6).
  */
-export function MdPageRenderer({ page }: { page: MdPage }) {
+export function MdPageRenderer({
+  page,
+  resolved = {},
+}: {
+  page: MdPage;
+  /** 블록이 그리는 데 필요한 바깥 데이터 (resolveMdPage 의 결과) */
+  resolved?: Record<string, Record<string, unknown>>;
+}) {
   return (
     <>
       {page.blocks.map((b) => {
@@ -16,7 +23,7 @@ export function MdPageRenderer({ page }: { page: MdPage }) {
         // 어드민이 새 모듈로 저장한 페이지를 아직 배포 안 된 렌더러가 열어도
         // 나머지 블록은 보여야 한다 (AC-6).
         if (!C) return null;
-        return <C key={b.id} {...b.values} />;
+        return <C key={b.id} {...b.values} {...(resolved[b.id] ?? {})} />;
       })}
     </>
   );

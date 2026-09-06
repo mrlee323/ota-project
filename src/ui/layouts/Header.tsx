@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { User, Heart, Menu, X, Globe, ChevronDown, LogOut } from "lucide-react";
 import { createClient } from "@/infrastructure/supabase/client";
@@ -12,6 +13,7 @@ interface HeaderProps {
 }
 
 export function Header({ initialAuthenticated = false }: HeaderProps) {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeNav, setActiveNav] = useState("국내호텔");
   const [isAuthenticated, setIsAuthenticated] = useState(initialAuthenticated);
@@ -39,6 +41,10 @@ export function Header({ initialAuthenticated = false }: HeaderProps) {
     setIsAuthenticated(false);
     await logoutAction();
   };
+
+  // 어드민은 자체 사이드바를 쓴다. 서비스 헤더(국내호텔·해외호텔…)가 얹히면
+  // 관리 화면에 서비스 내비게이션이 섞여 보이고 세로 공간도 잡아먹는다.
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
