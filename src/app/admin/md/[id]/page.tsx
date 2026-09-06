@@ -18,6 +18,9 @@ export default async function MdCanvasPage({ params }: { params: { id: string } 
         slug={row.slug}
         initialTitle={row.title}
         initialPage={row.page}
+        status={row.status}
+        startsAt={row.startsAt}
+        endsAt={row.endsAt}
       />
     </div>
   );

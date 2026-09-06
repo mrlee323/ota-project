@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
+import { draftMode } from "next/headers";
 import type { Metadata } from "next";
 import { getPublishedMdPage } from "@/infrastructure/md/mdPageApi";
+import { getMdPageBySlug } from "@/infrastructure/md/mdAdminApi";
 import { resolveMdPage } from "@/infrastructure/md/resolveMdPage";
 import { MdPageRenderer } from "@/ui/patterns/md/MdPageRenderer";
+import { MdTracker } from "@/ui/patterns/md/MdTracker";
 
 // ─── 골격 / 변동 값 두 층 (docs/md/design.md §6) ─────────────────────────────
 //
@@ -29,23 +32,42 @@ export async function generateStaticParams() {
 
 type Params = { params: { slug: string } };
 
+/**
+ * Draft Mode 면 발행 여부·기간을 무시하고 저장된 그대로 보여준다.
+ * 렌더러는 같은 것을 쓰므로 미리보기와 실제 화면이 갈라지지 않는다.
+ */
+async function loadPage(slug: string) {
+  if ((await draftMode()).isEnabled) return getMdPageBySlug(slug);
+  return getPublishedMdPage(slug);
+}
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const row = await getPublishedMdPage(params.slug);
+  const row = await loadPage(params.slug);
   if (!row) return {};
   return { title: row.title };
 }
 
 export default async function MdPublicPage({ params }: Params) {
-  const row = await getPublishedMdPage(params.slug);
+  const row = await loadPage(params.slug);
 
   // 발행 전이거나 노출 기간 밖이면 존재하지 않는 페이지다 (FR-4.3)
   if (!row) notFound();
+
+  const preview = (await draftMode()).isEnabled;
 
   // 골격 데이터는 서버에서 해석한다 — 캐시 대상이다
   const resolved = await resolveMdPage(row.page);
 
   return (
     <main>
+      {/* 미리보기 조회는 성과 수치를 오염시키므로 세지 않는다 */}
+      {preview ? (
+        <div className="bg-amber-100 px-4 py-2 text-center text-xs text-amber-800">
+          미리보기 — 아직 발행되지 않았습니다
+        </div>
+      ) : (
+        <MdTracker pageId={row.id} />
+      )}
       <MdPageRenderer page={row.page} resolved={resolved} />
     </main>
   );

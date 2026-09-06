@@ -11,18 +11,23 @@ import type { Template } from "@/domain/md/template";
 import { BlockFields } from "./BlockFields";
 import { MdPreview } from "./MdPreview";
 import { TemplatePicker } from "./TemplatePicker";
+import { PublishPanel } from "./PublishPanel";
+import type { MdStatus } from "@/domain/md/status";
 
 interface Props {
   pageId: string;
   slug: string;
   initialTitle: string;
   initialPage: MdPage;
+  status: MdStatus;
+  startsAt: string | null;
+  endsAt: string | null;
 }
 
 let seq = 0;
 const newId = () => `b${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-export function MdCanvas({ pageId, slug, initialTitle, initialPage }: Props) {
+export function MdCanvas({ pageId, slug, initialTitle, initialPage, status, startsAt, endsAt }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [blocks, setBlocks] = useState<MdBlock[]>(initialPage.blocks);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -119,7 +124,6 @@ export function MdCanvas({ pageId, slug, initialTitle, initialPage }: Props) {
             placeholder="기획전 제목"
           />
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">작성 중</span>
             <span className="truncate text-xs text-gray-400">/md/{slug}</span>
             <div className="flex-1" />
             <button
@@ -134,6 +138,14 @@ export function MdCanvas({ pageId, slug, initialTitle, initialPage }: Props) {
           </div>
           {message ? <p className="text-xs text-gray-600">{message}</p> : null}
         </div>
+
+        <PublishPanel
+          pageId={pageId}
+          slug={slug}
+          status={status}
+          startsAt={startsAt}
+          endsAt={endsAt}
+        />
 
         {/* 블록 추가 칩 */}
         <div className="border-b border-gray-200 px-4 py-3.5">

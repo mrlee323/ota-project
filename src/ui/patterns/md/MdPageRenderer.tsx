@@ -23,7 +23,13 @@ export function MdPageRenderer({
         // 어드민이 새 모듈로 저장한 페이지를 아직 배포 안 된 렌더러가 열어도
         // 나머지 블록은 보여야 한다 (AC-6).
         if (!C) return null;
-        return <C key={b.id} {...b.values} {...(resolved[b.id] ?? {})} />;
+        // display: contents 라 레이아웃에 영향을 주지 않으면서 블록 경계를 남긴다.
+        // 클릭 추적이 «어느 블록» 인지 알아야 모듈 종류별 성과를 낼 수 있다 (FR-8.2)
+        return (
+          <div key={b.id} style={{ display: "contents" }} data-md-block={b.id} data-md-module={b.moduleType}>
+            <C {...b.values} {...(resolved[b.id] ?? {})} />
+          </div>
+        );
       })}
     </>
   );

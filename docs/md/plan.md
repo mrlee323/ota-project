@@ -335,7 +335,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | `P0` | **완료** | `feat/md-P0` | AC-6 통과 · ISR 확인(빌드 ●) |
 | `P1` | **완료** | `feat/md-P1` | ★ AC-1·AC-2 통과 (테스트로 고정) |
 | `P2` | **핵심 완료** | main | 2단 캔버스(블록 패널 + 실시간 미리보기)·자동폼·구간추가·저장. 사용자 템플릿/즐겨찾기는 뒤로 |
-| `P3` | 대기 | | |
+| `P3` | **완료** | `feat/md-P3` | AC-3·AC-5·AC-7 확인. 발행·기간·Draft Mode·블록 단위 측정 |
 | `P4` | 대기 | | ★ AC-4 |
 | `P5` | 대기 | | |
 | `S0` | 대기 | | P0 끝나면 병렬 가능 |
@@ -360,5 +360,5 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | 실사 규모 | 기획전 7건 · 이미지 378장 · 이미지 의존 ~90% | module-survey.md |
 | 모듈 추가 비용 | **2곳** — 등록 파일만. 테스트로 고정 (`moduleCost.test.ts`) | AC-2 |
 | AC-1 통과 | 실사 3건 구조 재현 (`reproduce.test.ts`) | P1 커밋 |
-| 이미지 0장 발행 | | AC-3 |
+| 이미지 0장 발행 | 허브·특가 템플릿으로 발행 성공 | AC-3 |
 | L1 1차 통과율 | | AC-4 |

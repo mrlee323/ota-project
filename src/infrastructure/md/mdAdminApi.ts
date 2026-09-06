@@ -1,19 +1,20 @@
 import "server-only";
 import { createServiceClient } from "@/infrastructure/supabase/serviceClient";
 import { mdPageSchema, emptyMdPage, type MdPage } from "@/domain/md/page";
+import type { MdStatus } from "@/domain/md/status";
 
 export interface MdPageSummary {
   id: string;
   slug: string;
   title: string;
-  status: "draft" | "published" | "archived";
+  status: MdStatus;
+  startsAt: string | null;
+  endsAt: string | null;
   updatedAt: string;
 }
 
 export interface MdPageDetail extends MdPageSummary {
   page: MdPage;
-  startsAt: string | null;
-  endsAt: string | null;
 }
 
 function toSummary(r: Record<string, unknown>): MdPageSummary {
@@ -21,7 +22,9 @@ function toSummary(r: Record<string, unknown>): MdPageSummary {
     id: String(r.id),
     slug: String(r.slug),
     title: String(r.title),
-    status: r.status as MdPageSummary["status"],
+    status: r.status as MdStatus,
+    startsAt: (r.starts_at as string | null) ?? null,
+    endsAt: (r.ends_at as string | null) ?? null,
     updatedAt: String(r.updated_at),
   };
 }
@@ -30,7 +33,7 @@ export async function listMdPages(): Promise<MdPageSummary[]> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("md_pages")
-    .select("id, slug, title, status, updated_at")
+    .select("id, slug, title, status, starts_at, ends_at, updated_at")
     .order("updated_at", { ascending: false })
     .limit(100);
 
@@ -44,12 +47,7 @@ export async function getMdPageById(id: string): Promise<MdPageDetail | null> {
   if (error || !data) return null;
 
   const r = data as Record<string, unknown>;
-  return {
-    ...toSummary(r),
-    page: mdPageSchema.parse(r.page),
-    startsAt: (r.starts_at as string | null) ?? null,
-    endsAt: (r.ends_at as string | null) ?? null,
-  };
+  return { ...toSummary(r), page: mdPageSchema.parse(r.page) };
 }
 
 export async function createMdPage(input: {
@@ -82,4 +80,31 @@ export async function saveMdPage(id: string, page: MdPage, title?: string): Prom
 
   const { error } = await supabase.from("md_pages").update(patch).eq("id", id);
   if (error) throw new Error(`MD 저장 실패: ${error.message}`);
+}
+
+/** 발행 상태와 노출 기간을 함께 바꾼다 — 둘은 같이 봐야 «지금 보이는지» 가 정해진다 */
+export async function setMdStatus(
+  id: string,
+  status: MdStatus,
+  period?: { startsAt: string | null; endsAt: string | null },
+): Promise<void> {
+  const patch: Record<string, unknown> = { status };
+  if (period) {
+    patch.starts_at = period.startsAt;
+    patch.ends_at = period.endsAt;
+  }
+  const { error } = await createServiceClient().from("md_pages").update(patch).eq("id", id);
+  if (error) throw new Error(`상태 변경 실패: ${error.message}`);
+}
+
+/** slug 로 페이지를 찾는다 — Draft Mode 미리보기가 쓴다 */
+export async function getMdPageBySlug(slug: string): Promise<MdPageDetail | null> {
+  const { data, error } = await createServiceClient()
+    .from("md_pages")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error || !data) return null;
+  const r = data as Record<string, unknown>;
+  return { ...toSummary(r), page: mdPageSchema.parse(r.page) };
 }
