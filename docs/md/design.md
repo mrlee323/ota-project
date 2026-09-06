@@ -357,12 +357,17 @@ export function normalizeGroups(blocks: MdBlock[]): MdBlock[]
 #### 복제할 때 무엇을 비우고 무엇을 남기나
 
 값을 통째로 복사하면 호텔명이 중복되고, 전부 비우면 모양이 무너진다.
-**모듈 정의의 `input` 종류로 가른다** — 새 규칙을 만들지 않는다.
+**모듈 정의의 `input` 과 `freedom` 을 그대로 쓴다** — 새 규칙을 만들지 않는다.
 
-| `input` | 복제 시 |
+| 조건 | 복제 시 |
 |---|---|
-| `text` `textarea` `image` `link` `hotel-refs` | **비운다** — 묶음마다 다른 내용 |
-| `color-token` `color-free` `number` · `preset` enum | **유지한다** — 묶음끼리 같아야 할 모양 |
+| `image` `link` `hotel-refs` | **비운다** — 언제나 내용이다 |
+| `text` `textarea` **이고 `freedom: free`** | **비운다** — 자유 입력 문구 |
+| `text` `textarea` 이고 `preset`/`fixed` | **유지** — 정해진 값 중 «선택» 이라 모양 쪽이다 |
+| `color-*` `number` | **유지** |
+
+> `input` 만 보면 안 된다. `cta.style` 은 `input: "text"` 지만 preset 이라 모양이다 —
+> 이걸 비우면 복제본이 직전 묶음과 다르게 생긴다.
 
 담당자가 보는 결과 — 「직전 호텔과 같은 모양의 빈 칸」이 생긴다. 그게 원하는 것이다.
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { LayoutDashboard, FileText, LogOut } from "lucide-react";
+import Link from "next/link";
+import { LayoutDashboard, FileText, LogOut, LayoutTemplate } from "lucide-react";
 import { logoutAction } from "@/application/auth/actions";
 import type { AdminFeature } from "@/domain/admin/permissions";
 
@@ -11,6 +12,7 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ permissions, userEmail }: AdminSidebarProps) {
   const hasShowcase = permissions.some((p) => p.feature === "showcase" && p.canRead);
+  const hasMd = permissions.some((p) => p.feature === "md" && p.canRead);
 
   return (
     <aside className="flex w-60 flex-col border-r border-gray-200 bg-white">
@@ -38,6 +40,16 @@ export function AdminSidebar({ permissions, userEmail }: AdminSidebarProps) {
             <FileText size={16} />
             쇼케이스 관리
           </a>
+        )}
+
+        {hasMd && (
+          <Link
+            href="/admin/md"
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            <LayoutTemplate size={16} />
+            MD 기획전
+          </Link>
         )}
       </nav>
 

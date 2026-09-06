@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const ADMIN_FEATURES = ["showcase"] as const;
+export const ADMIN_FEATURES = ["showcase", "md"] as const;
 export type AdminFeature = (typeof ADMIN_FEATURES)[number];
 
 export const adminPermissionSchema = z.object({
