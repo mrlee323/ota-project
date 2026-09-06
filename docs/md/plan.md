@@ -338,7 +338,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | `P3` | **완료** | `feat/md-P3` | AC-3·AC-5·AC-7 확인. 발행·기간·Draft Mode·블록 단위 측정 |
 | `P4` | 대기 | | ★ AC-4 |
 | `P5` | 대기 | | |
-| `S0` | 대기 | | P0 끝나면 병렬 가능 |
+| `S0` | **로컬 확인 완료** | `feat/md-S0` | curl 로 initialize·tools/list·tools/call 통과. 배포·클라이언트 연결은 남음 |
 | `M1` | 대기 | | |
 | `M2` | 대기 | | |
 | `M3` | 대기 | | |
@@ -347,7 +347,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 
 | # | 질문 | 답 |
 |---|---|---|
-| Q-M1 | MCP 클라이언트 인증 방식 (Bearer / OAuth) | |
+| Q-M1 | MCP 클라이언트 인증 방식 (Bearer / OAuth) | 서버는 **둘 다 준비됨** — Bearer 검증 동작, 401 에 `resource_metadata` 를 실어 OAuth 디스커버리 경로도 열려 있다. 클라이언트 쪽 확인 남음 |
 | Q-M2 | ChatGPT 웹 커넥터에서 쓰기 도구가 통과하나 | |
 | Q-M3 | 모듈 30개에서 `search_modules` 가 맞는 걸 고르나 | |
 | Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | |
