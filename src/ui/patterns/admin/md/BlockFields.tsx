@@ -4,11 +4,15 @@ import type { MdBlock } from "@/domain/md/page";
 import type { ModuleDef } from "@/domain/md/moduleDef";
 import { validateBlock } from "@/domain/md/moduleDef";
 import { FieldControl } from "./FieldControl";
+import { ImageGenButton } from "./ImageGenButton";
+import type { MdPage } from "@/domain/md/page";
 
 interface Props {
   def: ModuleDef;
   block: MdBlock;
   onChange: (values: Record<string, unknown>) => void;
+  /** 이미지 생성이 문맥을 읽으려면 페이지 전체가 필요하다 */
+  imageContext?: { pageId: string; pageTitle: string; page: MdPage };
 }
 
 /**
@@ -19,7 +23,7 @@ interface Props {
  *
  * 검증은 편집 중에 보여준다. 저장 때 처음 알려주면 고치기 늦다.
  */
-export function BlockFields({ def, block, onChange }: Props) {
+export function BlockFields({ def, block, onChange, imageContext }: Props) {
   const issues = validateBlock(def, block.values);
   const issueOf = (key: string) => issues.find((i) => i.key === key)?.message;
 
@@ -58,6 +62,17 @@ export function BlockFields({ def, block, onChange }: Props) {
                 onChange={(v) => onChange({ ...block.values, [f.key]: v })}
               />
             )}
+
+            {/* 이미지 필드에만 생성 버튼을 단다 (FR-11.1) */}
+            {f.input === "image" && imageContext ? (
+              <ImageGenButton
+                pageId={imageContext.pageId}
+                pageTitle={imageContext.pageTitle}
+                page={imageContext.page}
+                blockId={block.id}
+                onPick={(url) => onChange({ ...block.values, [f.key]: url })}
+              />
+            ) : null}
 
             <span className={`text-[11px] leading-relaxed ${err ? "text-red-500" : "text-gray-400"}`}>
               {err ?? f.description}

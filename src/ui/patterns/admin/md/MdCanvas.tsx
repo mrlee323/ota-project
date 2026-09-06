@@ -231,6 +231,7 @@ export function MdCanvas({ pageId, slug, initialTitle, initialPage, status, star
                     <BlockFields
                       def={def}
                       block={b}
+                      imageContext={{ pageId, pageTitle: title, page }}
                       onChange={(values) =>
                         setBlocks((p) => p.map((x) => (x.id === b.id ? { ...x, values } : x)))
                       }

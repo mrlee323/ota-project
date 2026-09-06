@@ -337,7 +337,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | `P2` | **핵심 완료** | main | 2단 캔버스(블록 패널 + 실시간 미리보기)·자동폼·구간추가·저장. 사용자 템플릿/즐겨찾기는 뒤로 |
 | `P3` | **완료** | `feat/md-P3` | AC-3·AC-5·AC-7 확인. 발행·기간·Draft Mode·블록 단위 측정 |
 | `P4` | **완료** | `feat/md-P4` | ★ AC-4 통과 — 1차 85% · 최종 95% |
-| `P5` | 대기 | | |
+| `P5` | **코드 완료** | `feat/md-P5` | OG 확인됨. 이미지 생성은 마이그레이션 후 검증 |
 | `S0` | **로컬 확인 완료** | `feat/md-S0` | curl 로 initialize·tools/list·tools/call 통과. 배포·클라이언트 연결은 남음 |
 | `M1` | 대기 | | |
 | `M2` | 대기 | | |
