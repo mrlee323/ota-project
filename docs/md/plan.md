@@ -332,7 +332,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | 작업 | 상태 | 브랜치 | 비고 |
 |---|---|---|---|
 | `SETUP` | **완료** | `feat/md-SETUP` | zod4 · Node22 · 워크스페이스 · lint 경계 |
-| `P0` | 대기 | | |
+| `P0` | **완료** | `feat/md-P0` | AC-6 통과 · ISR 확인(빌드 ●) |
 | `P1` | 대기 | | ★ AC-1 관문 |
 | `P2` | 대기 | | |
 | `P3` | 대기 | | |
