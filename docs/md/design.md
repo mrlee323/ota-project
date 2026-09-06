@@ -499,17 +499,27 @@ Q1 에서 호텔 카드를 **id 참조**로 정했다 → 가격은 조회 시�
 <section style={{ "--md-bg": values.sectionBgColor, "--md-tone-strong": tone.strong }}>
 ```
 
-### draft 미리보기
+### draft 미리보기 — 라우트는 갈리고, 화면은 공유한다
 
-발행 전 페이지는 공개 URL 에서 안 보인다(FR-4.2). 미리보기는 Next 의 **Draft Mode** 로 연다 —
-같은 `/md/[slug]` 라우트를 쓰고, 렌더러도 같다.
+발행 전 페이지는 공개 URL 에서 안 보인다(FR-4.2).
+
+**처음엔 Draft Mode 로 같은 라우트를 쓰려 했다. 프로덕션에서 깨졌다.**
+`draftMode()` 는 쿠키를 읽고, 쿠키를 읽으면 Next 가 그 페이지를 동적으로 판정한다.
+ISR(`●`)로 빌드된 페이지에서 그러면 런타임 500 이다
+(`Page changed from static to dynamic at runtime, reason: cookies`).
+dev 서버는 이 검사를 하지 않아 로컬에서는 안 잡힌다.
 
 ```
-/api/md/preview?slug=...&token=...   →  draftMode().enable()  →  /md/[slug]
+/md/[slug]           ●  ISR · 쿠키를 읽지 않는다 · 발행 + 기간 안만
+/md/[slug]/preview   ƒ  동적 · 세션 필요 · 상태 무관하게 저장된 그대로
+        └── 둘 다 <MdPageView> 를 쓴다
 ```
 
-**별도 미리보기 라우트를 만들지 않는다.** 만드는 순간 «미리보기에선 됐는데 발행하니 다르다» 가 생긴다.
-어드민 캔버스의 미리보기도 이 주소를 iframe 으로 띄운다 (FR-3.4).
+**라우트가 갈린 이유는 캐시 정책이지 화면이 달라서가 아니다.**
+「별도 미리보기를 만들지 않는다」의 의도는 «미리보기 UI 를 따로 짜지 마라» 이고,
+`MdPageView` 를 공유하는 한 «미리보기에선 됐는데 발행하니 다르다» 는 생길 수 없다.
+
+> 교훈 — ISR 페이지에서 쿠키를 읽으면 안 된다. 세션이 필요한 화면은 라우트를 나눈다.
 
 ### 안 하는 것
 
