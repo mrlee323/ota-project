@@ -1,5 +1,10 @@
 import type { ComponentType } from "react";
 import { Hero } from "./modules/Hero";
+import { ImageBlock } from "./modules/Image";
+import { SectionTitle } from "./modules/SectionTitle";
+import { HotelCardList } from "./modules/HotelCardList";
+import { Notes } from "./modules/Notes";
+import { Cta } from "./modules/Cta";
 
 /**
  * 모듈 컴포넌트 등록 — **변경 지점 2/2** (AC-2).
@@ -12,4 +17,9 @@ import { Hero } from "./modules/Hero";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 모듈마다 props 가 다르다. 타입 안전은 validateBlock 이 런타임에 책임진다
 export const MODULE_REGISTRY: Record<string, ComponentType<any>> = {
   hero: Hero,
+  image: ImageBlock,
+  "section-title": SectionTitle,
+  "hotel-card-list": HotelCardList,
+  notes: Notes,
+  cta: Cta,
 };

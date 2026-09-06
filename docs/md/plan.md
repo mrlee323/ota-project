@@ -333,7 +333,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 |---|---|---|---|
 | `SETUP` | **완료** | `feat/md-SETUP` | zod4 · Node22 · 워크스페이스 · lint 경계 |
 | `P0` | **완료** | `feat/md-P0` | AC-6 통과 · ISR 확인(빌드 ●) |
-| `P1` | 대기 | | ★ AC-1 관문 |
+| `P1` | **완료** | `feat/md-P1` | ★ AC-1·AC-2 통과 (테스트로 고정) |
 | `P2` | 대기 | | |
 | `P3` | 대기 | | |
 | `P4` | 대기 | | ★ AC-4 |
@@ -358,7 +358,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | 지표 | 값 | 출처 |
 |---|---|---|
 | 실사 규모 | 기획전 7건 · 이미지 378장 · 이미지 의존 ~90% | module-survey.md |
-| 모듈 추가 비용 | | AC-2 |
-| AC-1 통과 | | P1 커밋 |
+| 모듈 추가 비용 | **2곳** — 등록 파일만. 테스트로 고정 (`moduleCost.test.ts`) | AC-2 |
+| AC-1 통과 | 실사 3건 구조 재현 (`reproduce.test.ts`) | P1 커밋 |
 | 이미지 0장 발행 | | AC-3 |
 | L1 1차 통과율 | | AC-4 |
