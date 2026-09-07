@@ -34,6 +34,7 @@ docs/md/context.md 와 docs/md/plan.md 를 먼저 읽어라.
 | 문서 | 무엇이 있나 | 언제 읽나 |
 |---|---|---|
 | [context.md](./context.md) | **배경 · 폐기된 안 · 반복되는 실수** | **항상 먼저** |
+| [onboarding.md](./onboarding.md) | 새 기기에서 환경 세팅 (환경변수를 어디서 받나) | 다른 노트북에서 시작할 때 |
 | [module-survey.md](./module-survey.md) | 공개 기획전 7건 실사. 모듈 6종·템플릿 4종의 **근거** | 모듈·템플릿을 만들 때 |
 | [requirements.md](./requirements.md) | FR 11군 · 수용기준 AC-1~7 · 실패 모드 · 결정 기록 | 항상 (해당 FR 만) |
 | [design.md](./design.md) | 결정 D1~D8 · 스키마 · 토큰 · 템플릿 · **서비스 렌더링** · 단계 | 구현 전 |
