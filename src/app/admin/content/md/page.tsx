@@ -5,11 +5,14 @@ import { getMdStats, getModuleClicks } from "@/infrastructure/md/mdEventApi";
 import { STATUS_LABEL, visibilityNote } from "@/domain/md/status";
 import { findModuleDef } from "@/domain/md/modules";
 import { MdCreateButton } from "@/ui/patterns/admin/md/MdCreateButton";
+import { McpTokenPanel } from "@/ui/patterns/admin/md/McpTokenPanel";
+import { listMcpTokens } from "@/infrastructure/mcp/auth";
 
 export default async function MdListPage() {
-  await requirePermission("md", "read", "/admin");
+  const { userId } = await requirePermission("md", "read", "/admin");
 
   const pages = await listMdPages();
+  const tokens = await listMcpTokens(userId);
   const [stats, moduleClicks] = await Promise.all([
     getMdStats(pages.map((p) => p.id)),
     getModuleClicks(),
@@ -42,6 +45,10 @@ export default async function MdListPage() {
           </div>
         </div>
       ) : null}
+
+      <div className="mt-5">
+        <McpTokenPanel tokens={tokens} />
+      </div>
 
       {pages.length === 0 ? (
         <p className="mt-10 text-center text-sm text-gray-400">아직 만든 기획전이 없습니다.</p>
