@@ -349,7 +349,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | # | 질문 | 답 |
 |---|---|---|
 | Q-M1 | MCP 클라이언트 인증 방식 (Bearer / OAuth) | **Bearer 로 붙었다 — 프로덕션 실측.** 어드민에서 발급한 `mdmcp_…` 로 `https://ota-project.vercel.app/api/mcp` 에 `initialize` · `tools/list` 통과, 도구 10종 확인. Claude Code 연결 `✔ Connected`. **OAuth 는 안 된다** — 401 이 `resource_metadata` 를 광고하지만 그 `/.well-known/oauth-protected-resource` 가 404 고 인가 서버도 없다. 방향은 §9 |
-| Q-M2 | ChatGPT 웹 커넥터에서 쓰기 도구가 통과하나 | |
+| Q-M2 | ChatGPT 웹 커넥터에서 쓰기 도구가 통과하나 | **서버 준비 완료** — OAuth 전 구간이 프로덕션에서 돈다 (§11). 커넥터 등록만 남음 |
 | Q-M3 | 모듈 30개에서 `search_modules` 가 맞는 걸 고르나 | **고른다.** 「오사카 가을 브랜드 기획전 히어로」 → `hero` · `hotel-card-list` · `image` 순. `suggest_template` 도 5곳 특가에 `t3-hub`(6점)를 1위로 올렸고 `why` 로 근거를 돌려준다 |
 | Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | **Claude 쪽만 측정** (Q-M6 참고). Codex CLI 는 붙여 놨지만(`~/.codex/config.toml` 의 `mcp_servers.md-automation`) **계정이 막는다** — `codex exec` 가 모든 모델에 400 «not supported when using Codex with a ChatGPT account» 를 돌려준다. §10 |
 | Q-M6 | 대화 몇 번에 초안이 나오나 | **사용자 요청 1번 · 도구 6번.** 프로덕션 실측(2026-09-19) — `suggest_template` → `search_hotels`(빗나감) → `search_hotels`(전체) → `create_md_draft` → `get_md_page` → `update_md_draft`. 발행만 남은 초안이 나왔다 |
@@ -454,7 +454,7 @@ CLI 로는 이 계정이 모델을 못 쓴다.
 
 ---
 
-## 11. M4 — OAuth 인가 서버 (구현 완료, 마이그레이션 대기)
+## 11. M4 — OAuth 인가 서버 (완료 · 프로덕션 실측)
 
 §9 에서 정한 방향을 그대로 구현했다. **사람이 하는 일은 로그인 하나다** —
 토큰 원문을 복사해 클라이언트에 옮기는 단계가 없어진다.
@@ -489,12 +489,28 @@ CLI 로는 이 계정이 모델을 못 쓴다.
 - 동적 등록이 `http://evil.com/cb` 를 **400 으로 거절**한다 (루프백 아닌 평문)
 - 도메인 테스트 16개 — PKCE·redirect_uri·수명·메타데이터
 
+### 프로덕션 전 구간 실측 (2026-09-19)
+
+마이그레이션 적용 후 배포본에서 처음부터 끝까지 돌렸다. **전부 통과.**
+
+| 확인 | 결과 |
+|---|---|
+| 동적 등록 | `client_id` 발급 201 |
+| 로그인 안 된 상태로 authorize | `/login?next=` 에 **authorize 요청 전체가 보존**된 채 리다이렉트 |
+| 동의 화면 | 「연결할까요?」 · 계정 표시 · «초안만 만들고 발행은 못 한다» 고지 |
+| 「연결」 | `redirect_uri` 로 `code` 와 `state` 가 그대로 돌아옴 |
+| 코드 교환 | `Bearer` · `expires_in 3600` · `scope md:draft` |
+| **그 토큰으로 `/api/mcp`** | 도구 10종 응답 — 사람이 토큰을 옮긴 적이 없다 |
+| 코드 재사용 | `invalid_grant` 로 거절 |
+| refresh | 새 access 발급 |
+| 갱신 뒤 예전 access | **401** — 제때 죽는다 |
+| 쓰고 난 refresh | `invalid_grant` — 회전된다 |
+| 어드민 목록 | 갱신을 두 번 해도 **연결이 한 줄**이다. 감사가 이어진다 |
+
+거절 경로도 확인했다 — 등록 안 된 `redirect_uri` 로 authorize 를 열면
+그 주소로 아무것도 돌려보내지 않고 화면에서 멈춘다. `http://evil.com/cb` 는
+등록 단계에서 400 이다.
+
 ### 남은 것
 
-**마이그레이션이 적용되지 않았다.** `supabase/migrations/20260919000000_md_oauth.sql` 을
-프로덕션에 반영해야 `/api/oauth/register` 가 산다. 지금은 테이블이 없어 500 이다.
-로컬에 Supabase CLI 가 없고 `.mcp.json` 의 access token 은 만료돼 있다 —
-대시보드 SQL 편집기에 붙여 넣는 게 가장 빠르다.
-
-적용 뒤 확인할 것 — 등록 → `/oauth/authorize` 로그인 → 코드 → 토큰 교환 →
-그 토큰으로 `/api/mcp` 호출. 그게 되면 **Q-M2(ChatGPT 웹 커넥터)** 를 붙일 수 있다.
+**Q-M2 — ChatGPT 웹 커넥터를 실제로 붙여 본다.** 서버 쪽 준비는 끝났다.
