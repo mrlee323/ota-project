@@ -351,7 +351,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | Q-M1 | MCP 클라이언트 인증 방식 (Bearer / OAuth) | **Bearer 로 붙었다 — 프로덕션 실측.** 어드민에서 발급한 `mdmcp_…` 로 `https://ota-project.vercel.app/api/mcp` 에 `initialize` · `tools/list` 통과, 도구 10종 확인. Claude Code 연결 `✔ Connected`. **OAuth 는 안 된다** — 401 이 `resource_metadata` 를 광고하지만 그 `/.well-known/oauth-protected-resource` 가 404 고 인가 서버도 없다. 방향은 §9 |
 | Q-M2 | ChatGPT 웹 커넥터에서 쓰기 도구가 통과하나 | |
 | Q-M3 | 모듈 30개에서 `search_modules` 가 맞는 걸 고르나 | **고른다.** 「오사카 가을 브랜드 기획전 히어로」 → `hero` · `hotel-card-list` · `image` 순. `suggest_template` 도 5곳 특가에 `t3-hub`(6점)를 1위로 올렸고 `why` 로 근거를 돌려준다 |
-| Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | **Claude 쪽만 측정.** 아래 Q-M6 참고. Codex 는 로컬 바이너리가 깨져 있어 미측정 |
+| Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | **Claude 쪽만 측정** (Q-M6 참고). Codex CLI 는 붙여 놨지만(`~/.codex/config.toml` 의 `mcp_servers.md-automation`) **계정이 막는다** — `codex exec` 가 모든 모델에 400 «not supported when using Codex with a ChatGPT account» 를 돌려준다. §10 |
 | Q-M6 | 대화 몇 번에 초안이 나오나 | **사용자 요청 1번 · 도구 6번.** 프로덕션 실측(2026-09-19) — `suggest_template` → `search_hotels`(빗나감) → `search_hotels`(전체) → `create_md_draft` → `get_md_page` → `update_md_draft`. 발행만 남은 초안이 나왔다 |
 
 ### 측정 기록 (이력용)
@@ -427,3 +427,27 @@ AI 는 여기서 한 번 헛돌고 조건을 바꿔야 했다. 실사(module-sur
 > 담당자가 이걸 못 보고 발행하면 **제목과 히어로가 어긋난 기획전이 공개된다.**
 > `create_md_draft` 가 최소한 `title` 을 히어로에 반영하거나, 플레이스홀더를 비워
 > 검증에 걸리게 하는 쪽이 맞다. 다음 작업 후보.
+
+
+### Codex 연결은 됐고, 계정이 막는다 (Q-M5)
+
+로컬 `codex` 바이너리가 깨져 있었다 — `vendor/aarch64-apple-darwin/` 에서 실행파일만
+사라지고 `path/rg` 만 남아 있었다. `npm i -g @openai/codex@latest` 로 복구(0.130.0 → 0.155.1).
+
+MCP 등록은 끝났다:
+
+```toml
+[mcp_servers.md-automation]
+url = "https://ota-project.vercel.app/api/mcp"
+bearer_token_env_var = "MD_MCP_TOKEN"
+```
+
+**막힌 곳은 우리 코드가 아니다.** `codex exec` 는 모델을 무엇으로 주든
+`400 invalid_request_error — The '<model>' model is not supported when using Codex with a
+ChatGPT account` 를 돌려준다 (`gpt-5.4-mini` · `gpt-5.1-codex` · `gpt-5-codex` · `gpt-5.1` ·
+`o3` · `codex-mini-latest` 전부). `codex login status` 는 «Logged in using ChatGPT» 다.
+CLI 로는 이 계정이 모델을 못 쓴다.
+
+**남은 길** Codex 데스크톱 앱에서 돌린다. 위 설정은 전역이라 앱도 읽지만,
+토큰을 환경변수에서 읽으므로 앱이 `MD_MCP_TOKEN` 을 볼 수 있어야 한다
+(셸이 아니라 `launchctl setenv` 쪽). 거기까지 하면 Q-M5 를 닫을 수 있다.
