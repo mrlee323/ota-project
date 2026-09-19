@@ -348,7 +348,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 
 | # | 질문 | 답 |
 |---|---|---|
-| Q-M1 | MCP 클라이언트 인증 방식 (Bearer / OAuth) | 서버는 **둘 다 준비됨** — Bearer 검증 동작, 401 에 `resource_metadata` 를 실어 OAuth 디스커버리 경로도 열려 있다. 클라이언트 쪽 확인 남음 |
+| Q-M1 | MCP 클라이언트 인증 방식 (Bearer / OAuth) | **Bearer 로 붙었다 — 프로덕션 실측.** 어드민에서 발급한 `mdmcp_…` 로 `https://ota-project.vercel.app/api/mcp` 에 `initialize` · `tools/list` 통과, 도구 10종 확인. Claude Code 연결 `✔ Connected`. **OAuth 는 안 된다** — 401 이 `resource_metadata` 를 광고하지만 그 `/.well-known/oauth-protected-resource` 가 404 고 인가 서버도 없다. 방향은 §9 |
 | Q-M2 | ChatGPT 웹 커넥터에서 쓰기 도구가 통과하나 | |
 | Q-M3 | 모듈 30개에서 `search_modules` 가 맞는 걸 고르나 | |
 | Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | |
@@ -364,3 +364,35 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | 수용기준 | **AC-1~7 전부 실측 통과** | — |
 | 이미지 0장 발행 | 허브·특가 템플릿으로 발행 성공 | AC-3 |
 | L1 1차 통과율 | **85% (17/20)** · 최종 95%. 실패는 전부 rate limit | AC-4 |
+
+---
+
+## 9. OAuth 를 붙인다면 — 회사 서비스에서 이미 검증된 흐름
+
+2026-09-19 기록. **이건 가설이 아니라 사람이 실무에서 돌려본 것이다.**
+
+회사 어드민에 MCP 를 붙였을 때 실제로 동작한 모양:
+
+- MCP 클라이언트가 인증을 걸면 **우리 어드민 로그인 페이지가 뜬다.**
+  거기서 로그인하면 연동이 끝난다 — 사용자가 토큰 원문을 복사해 옮기는 단계가 없다
+- 즉 401 의 `resource_metadata` → 인가 서버 디스커버리 → 로그인 → 코드 교환.
+  지금 404 인 well-known 라우트가 그 입구다
+
+### 반드시 걸린 문제 — 토큰이 하나면 세션이 끊긴다
+
+회사 어드민은 **계정당 유효 토큰이 하나**였다. 그래서 MCP 용 토큰을 발급하면
+**웹으로 로그인해 있던 세션이 끊겼다.** 둘 중 하나만 살아 있다.
+
+해결한 방법:
+
+| | |
+|---|---|
+| 토큰 계열을 **둘로 나눴다** | web 용 · mcp 용. 서로를 무효화하지 않는다 |
+| mcp 용 refresh | **30일 유지** — 대화 도중 만료돼 다시 로그인하는 일이 없도록 |
+
+**우리 쪽에 옮길 때** `md_mcp_tokens` 는 이미 web 세션과 **별개 테이블**이라
+「하나만 유효」 문제는 구조적으로 없다. 가져올 것은 **30일 refresh** 와
+**로그인 페이지를 인가 엔드포인트로 쓰는 흐름** 두 가지다.
+
+> 순서는 Bearer 클라이언트(Codex · Claude)를 먼저 붙여 Q-M3 · Q-M5 · Q-M6 을
+> 답한 뒤에 정한다. ChatGPT 웹 커넥터(Q-M2)가 이 흐름을 요구한다.
