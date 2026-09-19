@@ -9,9 +9,29 @@ import { createClient } from "@/infrastructure/supabase/client";
 import { authCredentialsSchema } from "@/domain/auth/schema";
 
 /**
+ * 로그인 뒤 돌아갈 곳 — `?next=` 를 제출 시점에 직접 읽는다.
+ *
+ * `useSearchParams()` 를 쓰면 이 페이지가 정적 프리렌더에서 빠지고
+ * Suspense 경계를 둘러야 한다. 로그인 폼 하나 때문에 그럴 일은 아니다.
+ *
+ * **같은 사이트 안의 경로만 받는다.** `//evil.com` 이나 `https://evil.com` 을
+ * 그대로 쓰면 로그인 직후 남의 사이트로 보내는 열린 리다이렉트가 된다.
+ */
+function safeNext(): string {
+  if (typeof window === "undefined") return "/";
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next) return "/";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/";
+  return next;
+}
+
+/**
  * 로그인 페이지 (Client Component)
  * 브라우저 Supabase 클라이언트로 직접 로그인하여
  * onAuthStateChange가 즉시 감지되도록 한다.
+ *
+ * `?next=` 가 있으면 로그인 뒤 그리로 돌아간다. MCP 의 OAuth 인가 흐름이
+ * 이 페이지를 거쳐 가기 때문이다 — 돌아갈 곳을 잃으면 연동이 끊긴다.
  */
 export default function LoginPage() {
   const router = useRouter();
@@ -53,7 +73,7 @@ export default function LoginPage() {
       }
 
       // 로그인 성공 → onAuthStateChange가 자동 감지 → Header 즉시 업데이트
-      router.push("/");
+      router.push(safeNext());
       router.refresh();
     } catch {
       setError("로그인 처리 중 오류가 발생했습니다");

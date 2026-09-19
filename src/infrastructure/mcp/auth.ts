@@ -38,12 +38,21 @@ export async function verifyMcpToken(raw?: string): Promise<McpIdentity | null> 
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("md_mcp_tokens")
-    .select("id, user_id, revoked_at")
+    .select("id, user_id, revoked_at, expires_at")
     .eq("token_hash", hash(raw))
     .maybeSingle();
 
-  const row = data as { id: string; user_id: string; revoked_at: string | null } | null;
+  const row = data as {
+    id: string;
+    user_id: string;
+    revoked_at: string | null;
+    expires_at: string | null;
+  } | null;
   if (!row || row.revoked_at) return null;
+
+  // OAuth 로 받은 access 토큰은 수명이 있다. 어드민에서 손으로 발급한 토큰은
+  // expires_at 이 null 이고 만료되지 않는다 — 사람이 끊을 때까지 산다
+  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return null;
 
   // 마지막 사용 시각은 «이 토큰이 아직 쓰이나» 를 판단하는 유일한 근거다.
   // Supabase 쿼리 빌더는 lazy 하다 — await 하지 않으면 실행되지 않는다
