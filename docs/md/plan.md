@@ -350,9 +350,9 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 |---|---|---|
 | Q-M1 | MCP 클라이언트 인증 방식 (Bearer / OAuth) | **Bearer 로 붙었다 — 프로덕션 실측.** 어드민에서 발급한 `mdmcp_…` 로 `https://ota-project.vercel.app/api/mcp` 에 `initialize` · `tools/list` 통과, 도구 10종 확인. Claude Code 연결 `✔ Connected`. **OAuth 는 안 된다** — 401 이 `resource_metadata` 를 광고하지만 그 `/.well-known/oauth-protected-resource` 가 404 고 인가 서버도 없다. 방향은 §9 |
 | Q-M2 | ChatGPT 웹 커넥터에서 쓰기 도구가 통과하나 | |
-| Q-M3 | 모듈 30개에서 `search_modules` 가 맞는 걸 고르나 | |
-| Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | |
-| Q-M6 | 대화 몇 번에 초안이 나오나 | |
+| Q-M3 | 모듈 30개에서 `search_modules` 가 맞는 걸 고르나 | **고른다.** 「오사카 가을 브랜드 기획전 히어로」 → `hero` · `hotel-card-list` · `image` 순. `suggest_template` 도 5곳 특가에 `t3-hub`(6점)를 1위로 올렸고 `why` 로 근거를 돌려준다 |
+| Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | **Claude 쪽만 측정.** 아래 Q-M6 참고. Codex 는 로컬 바이너리가 깨져 있어 미측정 |
+| Q-M6 | 대화 몇 번에 초안이 나오나 | **사용자 요청 1번 · 도구 6번.** 프로덕션 실측(2026-09-19) — `suggest_template` → `search_hotels`(빗나감) → `search_hotels`(전체) → `create_md_draft` → `get_md_page` → `update_md_draft`. 발행만 남은 초안이 나왔다 |
 
 ### 측정 기록 (이력용)
 
@@ -396,3 +396,34 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 
 > 순서는 Bearer 클라이언트(Codex · Claude)를 먼저 붙여 Q-M3 · Q-M5 · Q-M6 을
 > 답한 뒤에 정한다. ChatGPT 웹 커넥터(Q-M2)가 이 흐름을 요구한다.
+
+
+---
+
+## 10. 첫 프로덕션 파일럿에서 드러난 것 (2026-09-19)
+
+어드민 토큰으로 배포된 `/api/mcp` 에 붙여 초안 하나를 끝까지 만들어 봤다.
+결과물 — `가을 제주 5성급 특가` (`autumn-jeju-5star`, draft). 캔버스에서 실제 가격까지 렌더된다.
+
+### 되는 것
+
+- **안전장치가 실제로 막는다.** 발행된 「가을 오사카 특가」에 `update_md_draft` 를 던지니
+  «발행됨 상태라 고칠 수 없습니다» 로 거절하고 담당자가 되돌릴 URL 을 돌려줬다. MCP 로는 발행이 안 된다
+- **감사가 남는다.** 토큰 목록의 «마지막 사용» 시각이 호출 시점으로 갱신됐다
+- **미발행 페이지는 공개 URL 이 404 다.** 초안이 새어 나가지 않는다
+
+### 걸린 것 두 가지
+
+**1. 호텔 데이터가 국내 전용이다.** 「오사카 4성급」으로 `search_hotels` 를 부르면
+«조건에 맞는 호텔이 없습니다» 가 나온다. 해외 기획전을 말로 시키면 **도구는 정상인데 결과가 빈다** —
+AI 는 여기서 한 번 헛돌고 조건을 바꿔야 했다. 실사(module-survey)의 기획전이 해외 위주라면
+이건 파일럿이 아니라 데이터 문제로 따로 잡아야 한다.
+
+**2. 템플릿 기본값이 요청과 무관하게 들어온다.** `create_md_draft` 에 `title` 을
+「가을 제주 5성급 특가」로 주고 `templateId: t3-hub` 를 줬는데, **히어로 제목은
+「가을 오사카 특가」로 만들어졌다.** 템플릿의 플레이스홀더 값을 그대로 복사하기 때문이다.
+`update_md_draft` 를 한 번 더 불러 고쳐야 했고 — 이게 Q-M6 의 6번 중 2번을 차지한다.
+
+> 담당자가 이걸 못 보고 발행하면 **제목과 히어로가 어긋난 기획전이 공개된다.**
+> `create_md_draft` 가 최소한 `title` 을 히어로에 반영하거나, 플레이스홀더를 비워
+> 검증에 걸리게 하는 쪽이 맞다. 다음 작업 후보.
