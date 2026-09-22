@@ -1,6 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { SYSTEM_TEMPLATES, templateSchema } from "../template";
-import { MODULE_BY_TYPE } from "../modules";
+import {
+  SYSTEM_TEMPLATES, templateSchema, templateBlocksFrom, orderTemplates, type Template,
+} from "../template";
+import { MODULE_BY_TYPE, MODULE_DEFS } from "../modules";
+import { blockFromDef } from "../page";
+import { hero } from "../modules/hero";
+import { hotelCardList } from "../modules/hotelCardList";
+
+const userTemplate = (id: string, name: string): Template => ({
+  id, name, description: "", kind: "user", visibility: "private", ownerId: "u1",
+  blocks: [{ moduleType: "hero", moduleVersion: 1 }],
+});
 
 describe("시스템 템플릿", () => {
   it("4종이고 전부 스키마를 만족한다", () => {
@@ -40,5 +50,52 @@ describe("시스템 템플릿", () => {
     // 연속이어야 한다 — 흩어지면 묶음 경계를 못 찾는다
     const idx = brand.blocks.map((b, i) => (b.group ? i : -1)).filter((i) => i >= 0);
     expect(idx).toEqual([idx[0], idx[0] + 1, idx[0] + 2]);
+  });
+});
+
+describe("templateBlocksFrom — 구성만 굳힌다 (FR-9.3)", () => {
+  it("글과 이미지는 저장하지 않는다", () => {
+    // 지난달 「가을 오사카 특가」가 다음 달 템플릿에 따라오면 아무도 못 알아본다
+    const b = blockFromDef(hero, "h");
+    b.values = { ...b.values, title: "가을 오사카 특가", subtitle: "최대 30% 할인" };
+
+    const [out] = templateBlocksFrom([b], MODULE_DEFS);
+    expect(out.values?.title).toBeUndefined();
+    expect(out.values?.subtitle).toBeUndefined();
+    expect(out.values?.imageUrl).toBeUndefined();
+    expect(out.moduleType).toBe("hero");
+  });
+
+  it("모양은 남긴다 — 담당자가 정한 구성이다", () => {
+    const b = blockFromDef(hotelCardList, "c");
+    const [out] = templateBlocksFrom([b], MODULE_DEFS);
+    expect(out.values?.layout).toBe(hotelCardList.sample.layout);
+  });
+
+  it("반복 묶음은 그대로 간다", () => {
+    const b = blockFromDef(hero, "h", { type: "hotel", id: "g1" });
+    expect(templateBlocksFrom([b], MODULE_DEFS)[0].group).toEqual({ type: "hotel", id: "g1" });
+  });
+});
+
+describe("orderTemplates — 즐겨찾기가 위로 (FR-9.4)", () => {
+  const user = [userTemplate("u-1", "내 구성")];
+
+  it("즐겨찾기한 것이 맨 위다", () => {
+    const out = orderTemplates(SYSTEM_TEMPLATES, user, ["t3-hub"]);
+    expect(out[0].template.id).toBe("t3-hub");
+    expect(out[0].favorite).toBe(true);
+  });
+
+  it("즐겨찾기가 없으면 내가 만든 것이 먼저다", () => {
+    const out = orderTemplates(SYSTEM_TEMPLATES, user, []);
+    expect(out[0].template.id).toBe("u-1");
+    expect(out.every((x) => !x.favorite)).toBe(true);
+  });
+
+  it("모르는 id 는 조용히 빠진다 — 템플릿을 지워도 목록이 안 깨진다", () => {
+    const out = orderTemplates(SYSTEM_TEMPLATES, user, ["사라진-템플릿"]);
+    expect(out).toHaveLength(SYSTEM_TEMPLATES.length + 1);
+    expect(out.every((x) => !x.favorite)).toBe(true);
   });
 });

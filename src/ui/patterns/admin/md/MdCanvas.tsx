@@ -8,6 +8,7 @@ import type { ModuleDef } from "@/domain/md/moduleDef";
 import { MODULE_DEFS, findModuleDef } from "@/domain/md/modules";
 import { findGroups, duplicateGroup, removeGroup, normalizeGroups } from "@/domain/md/group";
 import type { Template } from "@/domain/md/template";
+import { templateBlocksFrom } from "@/domain/md/template";
 import { BlockFields } from "./BlockFields";
 import { MdPreview } from "./MdPreview";
 import { TemplatePicker } from "./TemplatePicker";
@@ -34,6 +35,8 @@ export function MdCanvas({ pageId, slug, initialTitle, initialPage, status, star
   const [openId, setOpenId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // 템플릿을 저장하면 목록을 다시 읽어야 한다
+  const [templateKey, setTemplateKey] = useState(0);
 
   const page: MdPage = useMemo(() => ({ schemaVersion: 1, blocks }), [blocks]);
   const groups = useMemo(() => findGroups(blocks), [blocks]);
@@ -55,6 +58,31 @@ export function MdCanvas({ pageId, slug, initialTitle, initialPage, status, star
         return tb.values ? { ...base, values: { ...base.values, ...tb.values } } : base;
       }),
     );
+  };
+
+  /**
+   * 지금 구성을 내 템플릿으로 저장한다 (FR-9.3).
+   *
+   * `templateBlocksFrom` 이 내용은 버리고 구성과 모양만 남긴다 —
+   * 지난 기획전 문구가 다음 달에 따라오면 아무도 못 알아본다.
+   */
+  const saveAsTemplate = async () => {
+    const name = prompt("템플릿 이름을 지어 주세요. 구성만 저장되고 글·이미지는 빠집니다.");
+    if (!name?.trim()) return;
+
+    const res = await fetch("/api/admin/md/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        blocks: templateBlocksFrom(normalizeGroups(blocks), MODULE_DEFS),
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return setMessage(body.error ?? "템플릿을 저장하지 못했습니다");
+
+    setTemplateKey((k) => k + 1);
+    setMessage(`「${name.trim()}」 구성을 저장했습니다. 글과 이미지는 빠져 있습니다.`);
   };
 
   const move = (index: number, dir: -1 | 1) => {
@@ -105,8 +133,19 @@ export function MdCanvas({ pageId, slug, initialTitle, initialPage, status, star
           </div>
 
           <div>
-            <p className="mb-3 text-[13px] font-bold text-gray-800">구성 직접 고르기</p>
-            <TemplatePicker onPick={applyTemplate} />
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[13px] font-bold text-gray-800">구성 직접 고르기</p>
+              {blocks.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={saveAsTemplate}
+                  className="text-xs font-semibold text-brand-600 hover:underline"
+                >
+                  지금 구성을 내 템플릿으로 저장
+                </button>
+              ) : null}
+            </div>
+            <TemplatePicker onPick={applyTemplate} reloadKey={templateKey} />
           </div>
         </div>
 

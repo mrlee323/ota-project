@@ -335,7 +335,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | `SETUP` | **완료** | `feat/md-SETUP` | zod4 · Node22 · 워크스페이스 · lint 경계 |
 | `P0` | **완료** | `feat/md-P0` | AC-6 통과 · ISR 확인(빌드 ●) |
 | `P1` | **완료** | `feat/md-P1` | ★ AC-1·AC-2 통과 (테스트로 고정) |
-| `P2` | **핵심 완료** | main | 2단 캔버스(블록 패널 + 실시간 미리보기)·자동폼·구간추가·저장. 사용자 템플릿/즐겨찾기는 뒤로 |
+| `P2` | **완료** | main | 2단 캔버스·자동폼·구간추가·저장 + 사용자 템플릿·즐겨찾기 (FR-9.3·9.4, §13) |
 | `P3` | **완료** | `feat/md-P3` | AC-3·AC-5·AC-7 확인. 발행·기간·Draft Mode·블록 단위 측정 |
 | `P4` | **완료** | `feat/md-P4` | ★ AC-4 통과 — 1차 85% · 최종 95% |
 | `P5` | **완료** | `feat/md-P5` | OG · 문맥 이미지 생성 둘 다 실물 확인 |
@@ -352,7 +352,7 @@ expect(page.blocks.map(b => b.moduleType)).toEqual(EXPECTED_6355);
 | Q-M2 | ChatGPT 웹 커넥터에서 쓰기 도구가 통과하나 | **서버 준비 완료** — OAuth 전 구간이 프로덕션에서 돈다 (§11). 커넥터 등록만 남음 |
 | Q-M3 | 모듈 30개에서 `search_modules` 가 맞는 걸 고르나 | **고른다.** 「오사카 가을 브랜드 기획전 히어로」 → `hero` · `hotel-card-list` · `image` 순. `suggest_template` 도 5곳 특가에 `t3-hub`(6점)를 1위로 올렸고 `why` 로 근거를 돌려준다 |
 | Q-M5 | 같은 도구를 Codex 와 Claude 가 다르게 쓰나 | **Claude 쪽만 측정** (Q-M6 참고). Codex CLI 는 붙여 놨지만(`~/.codex/config.toml` 의 `mcp_servers.md-automation`) **계정이 막는다** — `codex exec` 가 모든 모델에 400 «not supported when using Codex with a ChatGPT account» 를 돌려준다. §10 |
-| Q-M6 | 대화 몇 번에 초안이 나오나 | **사용자 요청 1번 · 도구 6번.** 프로덕션 실측(2026-09-19) — `suggest_template` → `search_hotels`(빗나감) → `search_hotels`(전체) → `create_md_draft` → `get_md_page` → `update_md_draft`. 발행만 남은 초안이 나왔다 |
+| Q-M6 | 대화 몇 번에 초안이 나오나 | **사용자 요청 1번 · 도구 6번** → 왕복 둘을 코드로 없앴다 (§12 제목 반영 · §13 빈 결과 개선). 재측정 남음. 실측(2026-09-19) 기준: 프로덕션 실측(2026-09-19) — `suggest_template` → `search_hotels`(빗나감) → `search_hotels`(전체) → `create_md_draft` → `get_md_page` → `update_md_draft`. 발행만 남은 초안이 나왔다 |
 
 ### 측정 기록 (이력용)
 
@@ -582,3 +582,49 @@ MCP 만 고치면 원인의 한 갈래만 막힌다. 서브에이전트로 `bloc
 **테스트가 버그를 기록하고 있었다.** `status.test.ts` 의 `ok()` 가 `blockFromDef` 로 만든
 샘플 그대로인 페이지를 «정상» 이라 보고 «막지 않는다» 를 기대했다. 그 기대가 곧 사고였다.
 내용 칸만 실제 값으로 바꾸는 헬퍼로 고치고, 샘플이 남으면 막는 검사를 두 개 더 넣었다.
+
+---
+
+## 13. P2 마무리 · 빈 결과 개선 (2026-09-22)
+
+### 사용자 템플릿 · 즐겨찾기 (FR-9.3 · FR-9.4)
+
+둘 다 `必` 인데 안 돼 있었다. 테이블(`md_templates` · `md_template_favorites`)과 RLS 는
+이미 적용돼 있는데 **코드에서 한 곳도 읽지 않았다** — `TemplatePicker` 가 코드 상수만 봤다.
+
+**정리한 것: 시스템 템플릿의 원본을 하나로 만들었다.** 코드 상수와 DB 시드를 두 벌로
+두고 있었고 **이미 설명 문구가 갈려 있었다.** 읽는 쪽은 코드뿐이었으니(MCP `suggest_template`,
+테스트, 캔버스) DB 의 `kind='system'` 행을 지웠다. DB 에는 사용자가 저장한 것만 들어온다.
+
+즐겨찾기는 시스템 템플릿에도 걸려야 하는데 시스템 id 는 uuid 가 아니라 코드 상수(`t3-hub`)다.
+`md_template_favorites.template_id` 의 uuid FK 를 버리고 text 로 받는다. 템플릿을 지우면
+고아 행이 남을 수 있지만 읽을 때 아는 id 와 교차하므로 목록이 깨지지 않는다 (테스트로 고정).
+
+**설계 결정 — 사용자 템플릿은 «구성» 만 저장하고 «내용» 은 버린다.**
+담당자가 「가을 오사카 특가」를 만든 뒤 그 구성을 저장하면, 다음 달에 얹는 순간 지난달 문구가
+따라온다. §12 의 샘플 사고와 같은 모양인데 **실제로 썼던 문구라 더 그럴싸해서 아무도 못 알아본다.**
+모양(preset·fixed — 카드 배치, 안내 제목)은 남긴다. 그게 담당자가 정한 구성이다.
+판별은 `isContentField` 를 쓴다 — 반복 묶음·MCP 초안과 **같은 정의다** (이제 세 번째 사용처).
+
+삭제도 넣었다. 저장만 되고 지울 수 없으면 잘못 저장한 하나가 목록에 영구히 남는다.
+
+### `search_hotels` 가 막다른 길을 주던 것 (Q-M6)
+
+파일럿에서 「오사카 4성급」이 `"조건에 맞는 호텔이 없습니다."` 로 끝나 AI 가 전체 조회를
+한 번 더 했다. 0건도 JSON 으로 주고 **다음 수를 함께 싣는다**:
+
+- `emptyBecause` — `keyword` / `minStars` / `combination` / `no_data` 중 무엇이 0건을 만들었나
+- `relaxed` — 조건을 하나씩 떼면 몇 건인가. 이 두 줄이 진단을 끝낸다
+- `available.regions` · `available.stars` — 쓸 수 있는 지역(광역 시·도)과 등급 분포
+
+실측: 「오사카 4성급」 → `emptyBecause: "keyword"`, `relaxed: [keyword 떼면 17건, minStars 떼도 0건]`.
+제안된 「강원」으로 다시 부르면 **4건이 나온다** (테스트로 고정).
+
+호텔 데이터는 전부 목데이터다(`src/__mocks__/hotel.ts` 71건, 실제 API 는 `hotel/api.ts` 의 TODO).
+**목데이터를 늘리지 않았다** — 이건 데이터 문제가 아니라 빈 결과를 쓸모 있게 만드는 문제다.
+
+### 남은 것
+
+- **마이그레이션 적용** — `20260922000000_md_template_favorites_text.sql` 을 SQL 편집기에 붙여야 한다.
+  적용 전에는 시스템 템플릿 즐겨찾기가 uuid 타입 오류로 실패한다
+- Q-M6 재측정 — 왕복 둘을 없앴으니 6번이 몇 번으로 줄었는지 다시 재야 한다

@@ -1,5 +1,5 @@
 import { fetchHotelList } from "@/infrastructure/hotel/api";
-import type { HotelBase } from "@/domain/hotel/types";
+import type { HotelBase, HotelSummary } from "@/domain/hotel/types";
 
 /**
  * MD 의 호텔 조회 — **골격과 가격을 따로 준다** (design.md §6).
@@ -67,6 +67,27 @@ export interface HotelSearchHit {
   rating: number;
 }
 
+const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "");
+
+const matchesKeyword = (h: HotelSummary, kw: string) =>
+  [h.name, h.nameEn, h.location].some((f) => normalize(f).includes(kw));
+
+const matchesStars = (h: HotelSummary, minStars: number) => h.stars >= minStars;
+
+const toHit = ({ id, name, location, stars, rating }: HotelSummary): HotelSearchHit => ({
+  id,
+  name,
+  location,
+  stars,
+  rating,
+});
+
+function applyFilters(all: HotelSummary[], kw: string | undefined, minStars: number | undefined) {
+  return all
+    .filter((h) => (minStars ? matchesStars(h, minStars) : true))
+    .filter((h) => (kw ? matchesKeyword(h, kw) : true));
+}
+
 /**
  * MCP·L1 용 호텔 검색.
  *
@@ -79,15 +100,117 @@ export async function searchHotelsForMd(opts: {
   limit?: number;
 }): Promise<HotelSearchHit[]> {
   const all = await fetchHotelList();
-  const kw = opts.keyword?.trim().toLowerCase().replace(/\s+/g, "");
+  const kw = opts.keyword ? normalize(opts.keyword) : undefined;
 
-  return all
-    .filter((h) => (opts.minStars ? h.stars >= opts.minStars : true))
-    .filter((h) =>
-      kw
-        ? [h.name, h.nameEn, h.location].some((f) => f.toLowerCase().replace(/\s+/g, "").includes(kw))
-        : true,
-    )
+  return applyFilters(all, kw, opts.minStars)
     .slice(0, opts.limit ?? 10)
-    .map(({ id, name, location, stars, rating }) => ({ id, name, location, stars, rating }));
+    .map(toHit);
+}
+
+// ─── 0건 응답 ───────────────────────────────────────────────────────────────
+
+export interface HotelSearchEmpty {
+  matched: 0;
+  query: { keyword?: string; minStars?: number };
+  /** 어느 조건이 0건을 만들었나. 조건을 하나씩 떼어 보고 판정한다 */
+  emptyBecause: "keyword" | "minStars" | "combination" | "no_data";
+  /** 조건을 하나 떼면 몇 건이 되는지 — 무엇을 포기하면 되는지가 바로 보인다 */
+  relaxed: Array<{ drop: "keyword" | "minStars"; matched: number }>;
+  /** 아래 분포가 어떤 범위에서 센 것인지 */
+  scope: string;
+  available: {
+    total: number;
+    /** 광역(시·도) 단위로 묶는다 — keyword 에 그대로 넣을 수 있는 단어다 */
+    regions: Array<{ region: string; count: number; stars: number[] }>;
+    /** 등급별 호텔 수. key 는 stars, 값은 «그 등급인» 호텔 수 */
+    stars: Record<string, number>;
+  };
+  hint: string;
+}
+
+function distribution(pool: HotelSummary[]): HotelSearchEmpty["available"] {
+  const regions = new Map<string, { count: number; stars: Set<number> }>();
+  const stars: Record<string, number> = {};
+
+  for (const h of pool) {
+    // "서울 광진구" → "서울". 구 단위까지 주면 목록만 길어지고 AI 가 keyword 로 고를 단어가 아니다
+    const key = h.location.split(" ")[0];
+    const r = regions.get(key) ?? { count: 0, stars: new Set<number>() };
+    r.count += 1;
+    r.stars.add(h.stars);
+    regions.set(key, r);
+
+    stars[h.stars] = (stars[h.stars] ?? 0) + 1;
+  }
+
+  return {
+    total: pool.length,
+    regions: [...regions]
+      .map(([region, r]) => ({ region, count: r.count, stars: [...r.stars].sort((a, b) => a - b) }))
+      .sort((a, b) => b.count - a.count || a.region.localeCompare(b.region)),
+    stars,
+  };
+}
+
+/**
+ * 0건일 때 **다음 수**를 만들어 준다 (plan.md Q-M6).
+ *
+ * 「호텔이 없습니다」 만 돌려주면 호출한 AI 가 단서가 없어서 조건 없이 전체 조회를
+ * 한 번 더 한다 — 파일럿에서 왕복 6번 중 1번이 이거였다. 그래서 0건 응답에
+ * «왜 0건인지» 와 «대신 쓸 수 있는 조건» 을 함께 싣는다.
+ */
+export async function explainEmptyHotelSearch(opts: {
+  keyword?: string;
+  minStars?: number;
+}): Promise<HotelSearchEmpty> {
+  const all = await fetchHotelList();
+  const kw = opts.keyword ? normalize(opts.keyword) : undefined;
+
+  // 조건을 하나만 남겨 본다. 남긴 쪽이 0건이면 그 조건이 범인이고,
+  // 둘 다 살아있는데 합쳐서 0건이면 조합 탓이다
+  const min = opts.minStars;
+  const keywordOnly = kw ? all.filter((h) => matchesKeyword(h, kw)) : all;
+  const starsOnly = min ? all.filter((h) => matchesStars(h, min)) : all;
+
+  const relaxed: HotelSearchEmpty["relaxed"] = [];
+  if (kw) relaxed.push({ drop: "keyword", matched: starsOnly.length });
+  if (opts.minStars) relaxed.push({ drop: "minStars", matched: keywordOnly.length });
+
+  const emptyBecause: HotelSearchEmpty["emptyBecause"] =
+    all.length === 0
+      ? "no_data"
+      : kw && keywordOnly.length === 0
+        ? "keyword"
+        : opts.minStars && starsOnly.length === 0
+          ? "minStars"
+          : "combination";
+
+  // 살아남은 쪽의 분포를 보여준다 — 그게 다음에 고를 수 있는 조건이다
+  const pool =
+    emptyBecause === "keyword" ? starsOnly : keywordOnly.length > 0 ? keywordOnly : starsOnly;
+  const scope =
+    pool === keywordOnly && kw
+      ? `keyword=「${opts.keyword}」 만 적용`
+      : pool === starsOnly && opts.minStars
+        ? `minStars=${opts.minStars} 만 적용`
+        : "전체";
+
+  const hint =
+    emptyBecause === "no_data"
+      ? "호텔 데이터가 비어 있다. 조건을 바꿔도 결과가 없다."
+      : emptyBecause === "keyword"
+        ? `keyword 「${opts.keyword}」 에 해당하는 호텔이 없다. available.regions 의 region 값을 keyword 로 써서 다시 부른다.`
+        : emptyBecause === "minStars"
+          ? `minStars=${opts.minStars} 를 만족하는 호텔이 없다. available.stars 의 등급 중 하나로 낮춰 다시 부른다.`
+          : `두 조건을 같이 쓰면 0건이다. ${scope} 기준 분포가 available 이니 거기서 한 조건만 골라 다시 부른다.`;
+
+  return {
+    matched: 0,
+    query: { keyword: opts.keyword, minStars: opts.minStars },
+    emptyBecause,
+    relaxed,
+    scope,
+    available: distribution(pool),
+    hint,
+  };
 }

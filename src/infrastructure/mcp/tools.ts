@@ -7,7 +7,7 @@ import { suggestTemplates } from "@/domain/md/suggest";
 import { SYSTEM_TEMPLATES } from "@/domain/md/template";
 import { tokens } from "@ds/design-system";
 import { listMdPages, getMdPageById } from "@/infrastructure/md/mdAdminApi";
-import { searchHotelsForMd } from "@/infrastructure/md/hotelLookup";
+import { searchHotelsForMd, explainEmptyHotelSearch } from "@/infrastructure/md/hotelLookup";
 
 // ─── MCP 읽기 도구 ──────────────────────────────────────────────────────────
 //
@@ -107,7 +107,10 @@ export function registerReadTools(server: McpServer): void {
       title: "호텔 검색",
       description:
         "기획전에 넣을 호텔을 찾는다. **여기서 나온 id 만 쓸 수 있다** — " +
-        "목록에 없는 호텔을 만들어내면 저장이 거부된다. 읽기 전용이다.",
+        "목록에 없는 호텔을 만들어내면 저장이 거부된다. " +
+        "0건이면 대신 matched:0 과 함께 emptyBecause(어느 조건이 0건을 만들었는지), " +
+        "relaxed(조건을 하나 떼면 몇 건인지), available.regions·available.stars(쓸 수 있는 지역과 등급 분포) 가 온다. " +
+        "**그 값으로 조건을 바꿔 바로 다시 부르면 되고, 전체 조회를 다시 할 필요는 없다.** 읽기 전용이다.",
       inputSchema: z.object({
         keyword: z.string().optional().describe("호텔명이나 지역. 예: 제주, 워커힐"),
         minStars: z.number().int().min(1).max(5).optional(),
@@ -116,7 +119,8 @@ export function registerReadTools(server: McpServer): void {
     },
     async ({ keyword, minStars, limit }) => {
       const hits = await searchHotelsForMd({ keyword, minStars, limit: limit ?? 10 });
-      return hits.length === 0 ? text("조건에 맞는 호텔이 없습니다.") : json(hits);
+      // 0건을 막다른 길로 두지 않는다 — 대안 조건을 실어 보낸다 (plan.md Q-M6)
+      return json(hits.length === 0 ? await explainEmptyHotelSearch({ keyword, minStars }) : hits);
     },
   );
 
