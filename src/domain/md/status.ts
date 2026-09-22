@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { MdPage } from "./page";
 import { validatePage } from "./page";
 import type { ModuleDef } from "./moduleDef";
+import { isContentField } from "./group";
 
 // ─── 발행 상태 ──────────────────────────────────────────────────────────────
 
@@ -80,6 +81,11 @@ export function publishBlockers(input: PublishInput, defs: ModuleDef[]): Publish
     out.push({ reason: `채우지 않은 항목이 ${issues.length}개 있습니다` });
   }
 
+  const asIs = sampleAsIs(input.page, defs);
+  if (asIs.length > 0) {
+    out.push({ reason: `예시 문구가 그대로 남아 있습니다: ${asIs.join(" · ")}` });
+  }
+
   // 실사 F2 — 표본 6/6 전부에 유의사항이 있었다. 법적 고지라 빠지면 안 된다
   if (!input.page.blocks.some((b) => b.moduleType === "notes")) {
     out.push({ reason: "유의사항 블록이 없습니다" });
@@ -87,6 +93,38 @@ export function publishBlockers(input: PublishInput, defs: ModuleDef[]): Publish
 
   if (input.startsAt && input.endsAt && input.startsAt >= input.endsAt) {
     out.push({ reason: "종료일이 시작일보다 빠릅니다" });
+  }
+
+  return out;
+}
+
+/**
+ * 모듈 샘플과 글자 그대로 같은 «내용» 칸을 찾는다.
+ *
+ * 샘플은 「이런 모양입니다」를 보여주는 데모 문구다. 캔버스에 모듈을 얹으면 샘플이 채워지고,
+ * L1 은 값을 못 뽑은 칸을 일부러 샘플로 되돌린다 (FR-5.4) — 둘 다 사람이 보고 고치라는 전제다.
+ * 그런데 빈 칸만 막으면 **고치지 않은 샘플은 통과한다.** 실제로 그렇게 나갔다:
+ * 히어로에 「가을 오사카 특가」와 「지금 예약하면 최대 30% 할인」이 실렸다.
+ * 근거 없는 할인율이라 빈 칸보다 나쁘다.
+ *
+ * 모양(preset·fixed) 칸은 보지 않는다 — 정해진 값 중 고르는 것이라 샘플과 같은 게 정상이다.
+ */
+function sampleAsIs(page: MdPage, defs: ModuleDef[]): string[] {
+  const byType = new Map(defs.map((d) => [d.type, d]));
+  const out: string[] = [];
+
+  for (const b of page.blocks) {
+    const def = byType.get(b.moduleType);
+    if (!def) continue;
+
+    for (const f of def.fields) {
+      if (!isContentField(f)) continue;
+      const sample = def.sample[f.key];
+      if (sample === undefined || sample === null || sample === "") continue;
+      if (JSON.stringify(b.values[f.key]) === JSON.stringify(sample)) {
+        out.push(`${def.name}의 ${f.label}`);
+      }
+    }
   }
 
   return out;

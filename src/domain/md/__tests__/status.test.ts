@@ -4,6 +4,7 @@ import {
 } from "../status";
 import { MODULE_DEFS } from "../modules";
 import { blockFromDef, type MdPage } from "../page";
+import { isContentField } from "../group";
 import { hero } from "../modules/hero";
 import { notes } from "../modules/notes";
 
@@ -12,7 +13,31 @@ const page = (types: { def: typeof hero; id: string }[]): MdPage => ({
   blocks: types.map((t) => blockFromDef(t.def, t.id)),
 });
 
-const ok = () => page([{ def: hero, id: "h" }, { def: notes, id: "n" }]);
+/**
+ * 샘플 문구를 실제 내용으로 바꾼다 — 안 바꾼 페이지는 발행되면 안 된다.
+ * 값의 «모양» 은 그대로 두고 내용만 비튼다. 그래야 필드 검증은 통과하고
+ * 「샘플 그대로」 검사에만 걸리지 않는다.
+ */
+const notSample = (v: unknown): unknown => {
+  if (Array.isArray(v)) return v.map(notSample);
+  if (typeof v !== "string") return v;
+  return v.startsWith("http") ? `${v}&real=1` : `실제 ${v}`;
+};
+
+const filled = (p: MdPage): MdPage => ({
+  ...p,
+  blocks: p.blocks.map((b) => {
+    const def = MODULE_DEFS.find((d) => d.type === b.moduleType)!;
+    const values = { ...b.values };
+    // 내용 칸만 바꾼다. preset·fixed 는 정해진 값 중 고르는 것이라 샘플과 같은 게 정상이다
+    for (const f of def.fields) {
+      if (isContentField(f)) values[f.key] = notSample(values[f.key]);
+    }
+    return { ...b, values };
+  }),
+});
+
+const ok = () => filled(page([{ def: hero, id: "h" }, { def: notes, id: "n" }]));
 
 describe("상태 전이", () => {
   it("모든 상태에서 되돌릴 길이 있다", () => {
@@ -31,6 +56,23 @@ describe("상태 전이", () => {
 describe("publishBlockers", () => {
   it("정상 페이지는 막지 않는다", () => {
     expect(publishBlockers({ page: ok(), startsAt: null, endsAt: null }, MODULE_DEFS)).toEqual([]);
+  });
+
+  it("샘플 문구가 그대로면 막는다 — 빈 칸보다 나쁘다", () => {
+    // 히어로 샘플에는 「지금 예약하면 최대 30% 할인」이 들어 있다.
+    // 빈 칸만 막으면 고치지 않은 이 문구가 그대로 공개된다
+    const blockers = publishBlockers(
+      { page: page([{ def: hero, id: "h" }, { def: notes, id: "n" }]), startsAt: null, endsAt: null },
+      MODULE_DEFS,
+    );
+    expect(blockers.some((b) => b.reason.includes("예시 문구"))).toBe(true);
+  });
+
+  it("한 칸만 샘플로 남아도 막는다", () => {
+    const p = ok();
+    p.blocks[0].values.subtitle = hero.sample.subtitle;
+    const blockers = publishBlockers({ page: p, startsAt: null, endsAt: null }, MODULE_DEFS);
+    expect(blockers.some((b) => b.reason.includes("부제"))).toBe(true);
   });
 
   it("빈 페이지는 막는다", () => {
