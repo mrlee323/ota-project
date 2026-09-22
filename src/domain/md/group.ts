@@ -64,7 +64,7 @@ export function groupTypesIn(blocks: MdBlock[]): string[] {
 const ALWAYS_CONTENT = new Set(["image", "link", "hotel-refs"]);
 const TEXTUAL = new Set(["text", "textarea"]);
 
-function isContent(f: ModuleDef["fields"][number]): boolean {
+export function isContentField(f: ModuleDef["fields"][number]): boolean {
   if (ALWAYS_CONTENT.has(f.input)) return true;
   // 자유 입력 문구만 내용이다. preset·fixed 는 정해진 값 중 «선택» 이라 모양이다
   return TEXTUAL.has(f.input) && f.freedom === "free";
@@ -74,7 +74,7 @@ function clearedValues(def: ModuleDef | undefined, values: Record<string, unknow
   if (!def) return { ...values };
   const out: Record<string, unknown> = {};
   for (const f of def.fields) {
-    if (isContent(f)) continue;
+    if (isContentField(f)) continue;
     if (f.key in values) out[f.key] = values[f.key];
   }
   return out;

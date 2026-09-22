@@ -1,9 +1,10 @@
 import "server-only";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/server";
-import { mdPageSchema, validatePage, blockFromDef, type MdBlock, type MdPage } from "@/domain/md/page";
+import { mdPageSchema, validatePage, type MdBlock, type MdPage } from "@/domain/md/page";
 import { MODULE_DEFS, findModuleDef } from "@/domain/md/modules";
 import { normalizeGroups, duplicateGroup, removeGroup, findGroups } from "@/domain/md/group";
+import { materialize } from "@/domain/md/materialize";
 import { SYSTEM_TEMPLATES } from "@/domain/md/template";
 import { createMdPage, getMdPageById, saveMdPage } from "@/infrastructure/md/mdAdminApi";
 import { filterExistingHotelIds } from "@/infrastructure/md/hotelLookup";
@@ -23,31 +24,7 @@ const DRAFT_ONLY = "초안(draft)만 생성·수정한다. 발행·삭제·외�
 const json = (v: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(v, null, 2) }] });
 const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
 
-let seq = 0;
-const newId = () => `b${Date.now().toString(36)}${(seq++).toString(36)}`;
-
 const editUrl = (id: string) => `/admin/content/md/${id}`;
-
-/** LLM 이 넘긴 블록을 실제 모듈 정의로 다시 세운다 — 임의 필드가 못 들어온다 */
-function materialize(
-  input: { moduleType: string; values?: Record<string, unknown>; group?: { type: string; id: string } }[],
-): { blocks: MdBlock[]; skipped: string[] } {
-  const skipped: string[] = [];
-  const blocks: MdBlock[] = [];
-
-  for (const b of input) {
-    const def = findModuleDef(b.moduleType);
-    if (!def) {
-      skipped.push(b.moduleType);
-      continue;
-    }
-    const base = blockFromDef(def, newId(), b.group);
-    // 샘플 위에 넘어온 값을 덮는다 — 못 채운 필드는 샘플이 남아 빈 껍데기가 안 된다
-    blocks.push({ ...base, values: { ...base.values, ...(b.values ?? {}) } });
-  }
-
-  return { blocks: normalizeGroups(blocks), skipped };
-}
 
 /** 호텔 id 가 실재하는지 확인하고, 없는 것은 빼낸다 (FR-5.5) */
 async function pruneHotels(blocks: MdBlock[]): Promise<{ blocks: MdBlock[]; dropped: string[] }> {
@@ -110,7 +87,9 @@ export function registerWriteTools(server: McpServer): void {
       description:
         `기획전을 초안으로 만든다. ${DRAFT_ONLY} ` +
         "발행하려면 담당자가 편집 화면에서 확인하고 직접 발행해야 한다. " +
-        "templateId 를 주면 그 구성으로 시작하고, blocks 를 주면 그대로 만든다.",
+        "templateId 를 주면 그 구성으로 시작하고, blocks 를 주면 그대로 만든다. " +
+        "**구성만 주면 글·이미지 칸은 비어서 나온다** — 예시 문구를 대신 채워 넣지 않는다. " +
+        "내용까지 채우려면 blocks 의 values 로 직접 준다. 비어 있으면 needsInput 에 목록이 온다.",
       inputSchema: z.object({
         title: z.string().min(1).max(120).describe("기획전 제목"),
         slug: z
@@ -133,18 +112,22 @@ export function registerWriteTools(server: McpServer): void {
       if (!source?.length) return text("templateId 나 blocks 중 하나는 있어야 합니다.");
 
       const { blocks: made, skipped } = materialize(source);
+
+      // 받은 제목을 첫 블록 제목 칸에 넣는다.
+      // 이게 없으면 페이지 제목과 화면에 보이는 큰 제목이 어긋난 채 발행된다 (§10)
+      const first = made[0];
+      const firstDef = first && findModuleDef(first.moduleType);
+      if (first && firstDef?.fields.some((f) => f.key === "title") && !first.values.title) {
+        first.values.title = title;
+      }
+
       const { blocks: pruned, dropped } = await pruneHotels(made);
       const page: MdPage = mdPageSchema.parse({ schemaVersion: 1, blocks: pruned });
 
-      // 서버가 최종 방어선이다 — 캔버스와 같은 검증을 지난다
-      const issues = validatePage(page, MODULE_DEFS);
-      if (issues.length > 0) {
-        return json({
-          created: false,
-          error: "채우지 않은 항목이 있어 만들지 못했습니다.",
-          issues: issues.map((i) => `${i.blockId}: ${i.message}`),
-        });
-      }
+      // 초안은 비어 있어도 저장된다 — 캔버스의 저장과 같은 기준이다 (FR-2.5).
+      // 덜 채운 채로 막으면 AI 가 샘플 문구로 칸을 메우게 되고, 그게 곧 발행된다.
+      // 발행을 막는 건 publishBlockers 의 몫이고, 그건 사람이 보는 화면에서 걸린다.
+      const todo = validatePage(page, MODULE_DEFS).map((i) => `${i.blockId}: ${i.message}`);
 
       try {
         const { id } = await createMdPage({ slug, title, page });
@@ -155,7 +138,12 @@ export function registerWriteTools(server: McpServer): void {
           status: "draft",
           unknownModules: skipped,
           unknownHotels: dropped,
-          note: "초안으로 만들었습니다. 편집 화면에서 확인하고 담당자가 발행하세요.",
+          needsInput: todo,
+          note:
+            todo.length > 0
+              ? `초안으로 만들었습니다. 아직 ${todo.length}개 칸이 비어 있어 이대로는 발행되지 않습니다 — ` +
+                "update_md_draft 로 채우거나, 담당자가 편집 화면에서 채웁니다."
+              : "초안으로 만들었습니다. 편집 화면에서 확인하고 담당자가 발행하세요.",
         });
       } catch (e) {
         return text(`만들지 못했습니다: ${(e as Error).message}`);
